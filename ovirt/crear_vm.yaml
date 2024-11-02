@@ -1,6 +1,6 @@
 ---
 - name: Crear una máquina virtual en oVirt
-  hosts: localhost
+  hosts: ovirt.consultame.cl
   gather_facts: false
   collections:
     - ovirt.ovirt
