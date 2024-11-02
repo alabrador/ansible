@@ -1,6 +1,6 @@
 ---
 - name: Instalar y configurar Zabbix Agent
-  hosts: zabbix_clients
+  hosts: all
   become: yes
 
   vars:
