@@ -12,6 +12,7 @@
       yum:
         name: "https://repo.zabbix.com/zabbix/7.0/centos/9/x86_64/zabbix-release-latest.el9.noarch.rpm"
         state: present
+        disable_gpg_check: true
       when: ansible_os_family == "RedHat"
 
     - name: Instalar Zabbix Agent
