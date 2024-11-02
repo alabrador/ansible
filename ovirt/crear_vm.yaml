@@ -1,0 +1,30 @@
+---
+- name: Crear una máquina virtual en oVirt
+  hosts: localhost
+  gather_facts: false
+  collections:
+    - ovirt.ovirt
+
+  vars:
+    ovirt_url: "https://ovirt.consultame.cl/ovirt-engine/api"
+    ovirt_username: "admin@internal"
+    ovirt_password: "Kom14265"
+    ovirt_cafile: "/etc/ca.crt"
+    vm_name: "mi_vm"
+    vm_template: "CentOS-Stream-9"
+    vm_cluster: "srv-cloud01"
+
+  tasks:
+    - name: Crear VM
+      ovirt_vm:
+        auth:
+          url: "{{ ovirt_url }}"
+          username: "{{ ovirt_username }}"
+          password: "{{ ovirt_password }}"
+          insecure: true
+        name: "{{ vm_name }}"
+        template: "{{ vm_template }}"
+        cluster: "{{ vm_cluster }}"
+        memory: 4GiB
+        cpu_cores: 2
+        state: present
