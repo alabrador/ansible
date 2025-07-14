@@ -26,9 +26,3 @@
         name: "*"
         state: latest
       when: ansible_distribution == "Fedora"
-
-    - name: Actualizar Arch Linux
-      ansible.builtin.pacman:
-        update_cache: yes
-        upgrade: yes
-      when: ansible_distribution == "Archlinux"
