@@ -1,0 +1,49 @@
+---
+- name: Mantenimiento preventivo de servidores Linux
+  hosts: all
+  become: true
+
+  tasks:
+
+    - name: Mostrar distribución del sistema
+      ansible.builtin.debug:
+        msg: "Sistema: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    - name: Limpiar logs en /var/log
+      ansible.builtin.shell: |
+        find /var/log -type f -name "*.log" -exec truncate -s 0 {} \;
+      args:
+        warn: false
+
+    - name: Borrar archivos temporales
+      ansible.builtin.file:
+        path: /tmp
+        state: absent
+      ignore_errors: true
+
+    - name: Recrear carpeta /tmp
+      ansible.builtin.file:
+        path: /tmp
+        state: directory
+        mode: '1777'
+
+    - name: Limpiar caché de paquetes (Debian/Ubuntu)
+      ansible.builtin.apt:
+        autoclean: yes
+        autoremove: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Limpiar caché de paquetes (RedHat/CentOS/Fedora)
+      ansible.builtin.command: yum clean all
+      when: ansible_os_family == "RedHat"
+
+    - name: Eliminar caché del sistema journal (si existe)
+      ansible.builtin.shell: |
+        journalctl --vacuum-time=7d
+      args:
+        warn: false
+      ignore_errors: true
+
+    - name: Reportar fin de mantenimiento
+      ansible.builtin.debug:
+        msg: "Mantenimiento finalizado correctamente en {{ inventory_hostname }}"
