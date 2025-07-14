@@ -9,12 +9,43 @@
       ansible.builtin.debug:
         msg: "Sistema: {{ ansible_distribution }} {{ ansible_distribution_version }}"
 
-    - name: Eliminar logs rotados antiguos en /var/log
+---
+- name: Limpieza total de logs principales y rotados
+  hosts: all
+  become: true
+
+  tasks:
+
+    - name: Eliminar logs rotados secure-*, maillog-*, messages-*
       ansible.builtin.shell: |
-        find /var/log -type f -regex '.*\-\(20[0-9]\{6\}\)' -delete
+        rm -f /var/log/secure-* /var/log/maillog-* /var/log/messages-*
       args:
         executable: /bin/bash
 
+    - name: Vaciar maillog
+      ansible.builtin.shell: cat /dev/null > /var/log/maillog
+      args:
+        executable: /bin/bash
+
+    - name: Vaciar messages
+      ansible.builtin.shell: cat /dev/null > /var/log/messages
+      args:
+        executable: /bin/bash
+
+    - name: Vaciar secure
+      ansible.builtin.shell: cat /dev/null > /var/log/secure
+      args:
+        executable: /bin/bash
+
+    - name: Mostrar espacio final ocupado en /var/log
+      ansible.builtin.shell: du -sh /var/log
+      register: log_size
+      args:
+        executable: /bin/bash
+
+    - name: Reporte del espacio liberado
+      ansible.builtin.debug:
+        msg: "Espacio actual en /var/log: {{ log_size.stdout }}"
 
     - name: Borrar archivos temporales (/tmp)
       ansible.builtin.file:
