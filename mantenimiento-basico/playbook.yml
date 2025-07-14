@@ -9,9 +9,9 @@
       ansible.builtin.debug:
         msg: "Sistema: {{ ansible_distribution }} {{ ansible_distribution_version }}"
 
-    - name: Limpiar logs en /var/log
+    - name: Eliminar logs comprimidos y rotados en /var/log
       ansible.builtin.shell: |
-        find /var/log -type f -name "*.log" -exec truncate -s 0 {} \;
+        find /var/log -type f \( -name "*.gz" -o -name "*.1" -o -name "*.old" \) -delete
       args:
         executable: /bin/bash
 
