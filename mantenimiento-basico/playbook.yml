@@ -9,13 +9,6 @@
       ansible.builtin.debug:
         msg: "Sistema: {{ ansible_distribution }} {{ ansible_distribution_version }}"
 
----
-- name: Limpieza total de logs principales y rotados
-  hosts: all
-  become: true
-
-  tasks:
-
     - name: Eliminar logs rotados secure-*, maillog-*, messages-*
       ansible.builtin.shell: |
         rm -f /var/log/secure-* /var/log/maillog-* /var/log/messages-*
