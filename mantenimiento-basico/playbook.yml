@@ -13,9 +13,9 @@
       ansible.builtin.shell: |
         find /var/log -type f -name "*.log" -exec truncate -s 0 {} \;
       args:
-        warn: false
+        executable: /bin/bash
 
-    - name: Borrar archivos temporales
+    - name: Borrar archivos temporales (/tmp)
       ansible.builtin.file:
         path: /tmp
         state: absent
@@ -37,13 +37,12 @@
       ansible.builtin.command: yum clean all
       when: ansible_os_family == "RedHat"
 
-    - name: Eliminar caché del sistema journal (si existe)
-      ansible.builtin.shell: |
-        journalctl --vacuum-time=7d
+    - name: Vaciar logs antiguos del journal (si existe)
+      ansible.builtin.shell: journalctl --vacuum-time=7d
       args:
-        warn: false
+        executable: /bin/bash
       ignore_errors: true
 
     - name: Reportar fin de mantenimiento
       ansible.builtin.debug:
-        msg: "Mantenimiento finalizado correctamente en {{ inventory_hostname }}"
+        msg: "Mantenimiento finalizado en {{ inventory_hostname }}"
