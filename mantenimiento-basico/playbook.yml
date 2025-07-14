@@ -9,11 +9,12 @@
       ansible.builtin.debug:
         msg: "Sistema: {{ ansible_distribution }} {{ ansible_distribution_version }}"
 
-    - name: Eliminar logs comprimidos y rotados en /var/log
+    - name: Eliminar logs rotados antiguos en /var/log
       ansible.builtin.shell: |
-        find /var/log -type f \( -name "*.gz" -o -name "*.1" -o -name "*.old" \) -delete
+        find /var/log -type f -regex '.*\-\(20[0-9]\{6\}\)' -delete
       args:
         executable: /bin/bash
+
 
     - name: Borrar archivos temporales (/tmp)
       ansible.builtin.file:
