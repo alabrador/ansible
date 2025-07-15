@@ -62,3 +62,8 @@
       when: "'port default vlan {{ vlan_id }}' in port_config.stdout | join(' ')"
       debug:
         msg: "El puerto {{ target_port }} ya pertenece a la VLAN {{ vlan_id }}, no se realizaron cambios."
+
+    - name: Guardar configuración persistente
+      ansible.netcommon.cli_command:
+      command: save -y
+
