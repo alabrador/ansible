@@ -1,12 +1,11 @@
 ---
-- name: Verificar, crear y permitir VLAN en Huawei Core (completo)
-  hosts: core-sw
+- name: Verificar y configurar VLAN y puerto en switch Huawei
+  hosts: "{{ target_switch }}"
   gather_facts: no
-
-  vars:
-    trunk_interface: Eth-Trunk1
+  vars_prompt: []
 
   tasks:
+
     - name: Verificar si la VLAN {{ vlan_id }} existe
       ansible.netcommon.cli_command:
         command: "display vlan {{ vlan_id }}"
@@ -20,12 +19,12 @@
           - vlan {{ vlan_id }}
           - description {{ vlan_name }}
 
-    - name: Verificar configuración del trunk
+    - name: Verificar configuración del trunk {{ trunk_interface }}
       ansible.netcommon.cli_command:
         command: "display current-configuration interface {{ trunk_interface }}"
       register: trunk_config
 
-    - name: Agregar VLAN al trunk si no está permitida (solo si no está la VLAN ni está permitido 'all')
+    - name: Agregar VLAN al trunk si no está permitida
       when: >
         ('vlan all' not in trunk_config.stdout | join(' ')) and
         ('vlan {{ vlan_id }}' not in trunk_config.stdout | join(' '))
@@ -38,9 +37,28 @@
       debug:
         msg: >
           {% if 'vlan all' in trunk_config.stdout | join(' ') %}
-            La interfaz {{ trunk_interface }} ya permite todas las VLANs (vlan all).
+            El trunk {{ trunk_interface }} ya permite todas las VLANs (vlan all).
           {% elif 'vlan ' ~ vlan_id in trunk_config.stdout | join(' ') %}
             La VLAN {{ vlan_id }} ya está permitida en el trunk {{ trunk_interface }}.
           {% else %}
             Se ha agregado la VLAN {{ vlan_id }} al trunk {{ trunk_interface }}.
           {% endif %}
+
+    - name: Verificar configuración del puerto {{ target_port }}
+      ansible.netcommon.cli_command:
+        command: "display current-configuration interface {{ target_port }}"
+      register: port_config
+
+    - name: Configurar puerto {{ target_port }} como access si no pertenece a la VLAN {{ vlan_id }}
+      when: "'port default vlan {{ vlan_id }}' not in port_config.stdout | join(' ')"
+      ansible.netcommon.cli_config:
+        parents: ["interface {{ target_port }}"]
+        lines:
+          - port link-type access
+          - port default vlan {{ vlan_id }}
+          - undo shutdown
+
+    - name: Mostrar estado del puerto
+      when: "'port default vlan {{ vlan_id }}' in port_config.stdout | join(' ')"
+      debug:
+        msg: "El puerto {{ target_port }} ya pertenece a la VLAN {{ vlan_id }}, no se realizaron cambios."
