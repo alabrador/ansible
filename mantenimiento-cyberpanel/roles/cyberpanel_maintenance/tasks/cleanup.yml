@@ -18,7 +18,6 @@
   find:
     paths:
       - /usr/local/lsws/logs
-      - /usr/local/CyberPanel/logs
       - /var/log
     patterns: "*.log"
     age: "{{ log_retention_days }}d"
