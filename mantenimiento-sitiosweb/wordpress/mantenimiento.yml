@@ -13,53 +13,65 @@
 
   tasks:
 
-    - name: Descargar y Instalar WP-CLI
+    - name: Comprobar si WP-CLI esta instalado
+      stat:
+        path: /usr/local/bin/wp
+      register: wpcli_bin
+
+    - name: Descargar e instalar WP-CLI
       get_url:
         url: https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
         dest: /usr/local/bin/wp
         mode: '0755'
+      when: not wpcli_bin.stat.exists
 
     - name: Activar mantenimiento
       command: wp maintenance-mode activate
       become_user: "{{ item }}"
+      become_flags: "-H"
       args:
-        chdir: "/home/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
       failed_when: false
 
-    - name: Actualizar core
+    - name: Actualizar WordPress core
       command: wp core update
       become_user: "{{ item }}"
+      become_flags: "-H"
       args:
-        chdir: "/home/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
 
-    - name: Actualizar DB
+    - name: Actualizar base de datos WordPress
       command: wp core update-db
       become_user: "{{ item }}"
+      become_flags: "-H"
       args:
-        chdir: "/home/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
       failed_when: false
 
     - name: Actualizar plugins
       command: wp plugin update --all
       become_user: "{{ item }}"
+      become_flags: "-H"
       args:
-        chdir: "/home/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
 
     - name: Actualizar themes
       command: wp theme update --all
       become_user: "{{ item }}"
+      become_flags: "-H"
       args:
-        chdir: "/home/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
 
-    - name: Desactivar mantenimiento
+    - name: Desactivar mantenimiento (siempre)
       command: wp maintenance-mode deactivate
       become_user: "{{ item }}"
+      become_flags: "-H"
       args:
-        chdir: "/home/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
       failed_when: false
