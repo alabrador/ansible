@@ -1,0 +1,45 @@
+---
+- name: Actualización automática de CyberPanel + despliegue index.html
+  hosts: srv-cpweb02
+  become: yes
+  vars:
+    cyberpanel_template_path: /usr/local/CyberCP/baseTemplate/templates/baseTemplate
+  tasks:
+
+    - name: Instalar expect
+      package:
+        name: expect
+        state: present
+
+    - name: Actualizar CyberPanel sin interacción
+      expect:
+        command: >
+          bash -c "sh <(curl -fsSL https://raw.githubusercontent.com/usmannasir/cyberpanel/stable/preUpgrade.sh
+          || wget -O - https://raw.githubusercontent.com/usmannasir/cyberpanel/stable/preUpgrade.sh)"
+        responses:
+          'Press Enter to continue': ''
+          'Do you want to continue.*': 'y'
+          'Are you sure.*': 'y'
+          'Continue.*': 'y'
+        timeout: 3600
+      register: cyberpanel_upgrade
+
+    - name: Mostrar salida de la actualización
+      debug:
+        var: cyberpanel_upgrade.stdout
+
+    - name: Verificar que existe la ruta baseTemplate
+      file:
+        path: "{{ cyberpanel_template_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Copiar index.html al baseTemplate de CyberPanel
+      copy:
+        src: index.html
+        dest: "{{ cyberpanel_template_path }}/index.html"
+        owner: root
+        group: root
+        mode: '0644'
