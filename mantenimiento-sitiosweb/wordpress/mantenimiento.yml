@@ -1,0 +1,75 @@
+---
+- name: Mantenimiento basico WordPress
+  hosts: srv-cpweb02
+  become: yes
+  vars:
+    wp_base_path: /home
+    wp_sites:
+      - algry.com
+      - bodegasduron.com
+      - nutribenprofesionales.es
+      - visitarbodegasriberadelduero.com
+      - visitarbodegasrioja.com
+
+  tasks:
+
+    - name: Descargar y Instalar WP-CLI
+      get_url:
+        url: https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+        dest: /usr/local/bin/wp
+        mode: '0755'
+
+    - name: Activar modo mantenimiento
+      command: wp maintenance-mode activate
+      args:
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+      loop: "{{ wp_sites }}"
+      register: maintenance_on
+      failed_when: false
+
+    - name: Actualizar WordPress core
+      command: wp core update
+      args:
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+      loop: "{{ wp_sites }}"
+
+    - name: Actualizar base de datos WordPress
+      command: wp core update-db
+      args:
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+      loop: "{{ wp_sites }}"
+      failed_when: false
+
+    - name: Actualizar plugins
+      command: wp plugin update --all
+      args:
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+      loop: "{{ wp_sites }}"
+
+    - name: Actualizar themes
+      command: wp theme update --all
+      args:
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+      loop: "{{ wp_sites }}"
+
+    - name: Limpiar cache WordPress
+      command: wp cache flush
+      args:
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+      loop: "{{ wp_sites }}"
+      failed_when: false
+
+    - name: Ajustar permisos recomendados
+      file:
+        path: "{{ wp_base_path }}/{{ item }}/public_html"
+        owner: "{{ item }}"
+        group: "{{ item }}"
+        recurse: yes
+      loop: "{{ wp_sites }}"
+
+    - name: Desactivar modo mantenimiento
+      command: wp maintenance-mode deactivate
+      args:
+        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+      loop: "{{ wp_sites }}"
+      failed_when: false
