@@ -1,0 +1,6 @@
+- name: Verificar servicios CyberPanel
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop: "{{ cyberpanel_services }}"

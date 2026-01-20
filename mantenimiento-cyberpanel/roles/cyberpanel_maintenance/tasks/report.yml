@@ -1,0 +1,8 @@
+- name: Reporte mantenimiento
+  debug:
+    msg:
+      - "Servidor: {{ inventory_hostname }}"
+      - "CyberPanel: 2.4.4"
+      - "WebServer: OpenLiteSpeed"
+      - "Fecha: {{ ansible_date_time.iso8601 }}"
+      - "Estado: OK"

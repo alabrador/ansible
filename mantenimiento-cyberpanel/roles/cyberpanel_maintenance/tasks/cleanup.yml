@@ -1,0 +1,31 @@
+- name: Limpiar cache del sistema
+  command: dnf clean all
+  when: ansible_facts.os_family == "RedHat"
+
+- name: Limpiar /tmp antiguos
+  find:
+    paths: /tmp
+    age: "{{ tmp_retention_days }}d"
+  register: tmp_files
+
+- name: Borrar tmp antiguos
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ tmp_files.files }}"
+
+- name: Buscar logs antiguos
+  find:
+    paths:
+      - /usr/local/lsws/logs
+      - /usr/local/CyberPanel/logs
+      - /var/log
+    patterns: "*.log"
+    age: "{{ log_retention_days }}d"
+  register: old_logs
+
+- name: Eliminar logs antiguos
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ old_logs.files }}"

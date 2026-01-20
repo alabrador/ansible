@@ -1,0 +1,20 @@
+- name: Espacio en disco
+  command: df -h /
+  register: disk
+
+- debug:
+    msg: "{{ disk.stdout }}"
+
+- name: Memoria RAM
+  command: free -h
+  register: ram
+
+- debug:
+    msg: "{{ ram.stdout }}"
+
+- name: Carga del sistema
+  command: uptime
+  register: load
+
+- debug:
+    msg: "{{ load.stdout }}"

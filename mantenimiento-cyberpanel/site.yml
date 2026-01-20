@@ -1,0 +1,7 @@
+- name: Mantenimiento preventivo CyberPanel 2.4.4 (OpenLiteSpeed)
+  hosts: cyberpanel
+  become: true
+  gather_facts: true
+
+  roles:
+    - cyberpanel_maintenance
