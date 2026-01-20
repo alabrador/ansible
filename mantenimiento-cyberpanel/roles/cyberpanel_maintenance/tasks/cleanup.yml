@@ -35,16 +35,16 @@
     file_type: directory
   register: backup_dirs
 
-- name: Ordenar backups por fecha (más reciente primero)
+- name: Ordenar backups por nombre (más reciente primero)
   set_fact:
-    backups_sorted: "{{ backup_dirs.files | sort(attribute='mtime', reverse=true) }}"
+    backups_sorted: "{{ backup_dirs.files | sort(attribute='path') | reverse }}"
 
 - name: Mostrar backup que se conservará
   debug:
     msg: "Se conservará el backup: {{ backups_sorted[0].path }}"
   when: backups_sorted | length > 0
 
-- name: Eliminar backups antiguos (mantener solo el más reciente)
+- name: Eliminar backups antiguos (mantener solo el último)
   file:
     path: "{{ item.path }}"
     state: absent
