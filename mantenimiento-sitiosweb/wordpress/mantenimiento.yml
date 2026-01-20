@@ -4,74 +4,76 @@
   become: yes
   vars:
     wp_base_path: /home
+    wp_bin: /usr/local/bin/wp
+
     wp_sites:
-      - algry.com
-      - bodegasduron.com
-      - nutribenprofesionales.es
-      - visitarbodegasriberadelduero.com
-      - visitarbodegasrioja.com
+      - domain: algry.com
+        user: algry9302
+      - domain: bodegasduron.com
+        user: bodeg3787
+      - domain: nutribenprofesionales.es
+        user: nutri8393
+      - domain: visitarbodegasriberadelduero.com
+        user: grupo1425
+      - domain: visitarbodegasrioja.com
+        user: visit7691
 
   tasks:
 
     - name: Comprobar si WP-CLI esta instalado
       stat:
-        path: /usr/local/bin/wp
+        path: "{{ wp_bin }}"
       register: wpcli_bin
 
     - name: Descargar e instalar WP-CLI
       get_url:
         url: https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-        dest: /usr/local/bin/wp
+        dest: "{{ wp_bin }}"
         mode: '0755'
       when: not wpcli_bin.stat.exists
 
     - name: Activar mantenimiento
-      command: wp maintenance-mode activate
-      become_user: "{{ item }}"
-      become_flags: "-H"
+      shell: |
+        sudo -H -u {{ item.user }} {{ wp_bin }} maintenance-mode activate
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
       loop: "{{ wp_sites }}"
       failed_when: false
 
     - name: Actualizar WordPress core
-      command: wp core update
-      become_user: "{{ item }}"
-      become_flags: "-H"
+      shell: |
+        sudo -H -u {{ item.user }} {{ wp_bin }} core update
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
       loop: "{{ wp_sites }}"
 
     - name: Actualizar base de datos WordPress
-      command: wp core update-db
-      become_user: "{{ item }}"
-      become_flags: "-H"
+      shell: |
+        sudo -H -u {{ item.user }} {{ wp_bin }} core update-db
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
       loop: "{{ wp_sites }}"
       failed_when: false
 
     - name: Actualizar plugins
-      command: wp plugin update --all
-      become_user: "{{ item }}"
-      become_flags: "-H"
+      shell: |
+        sudo -H -u {{ item.user }} {{ wp_bin }} plugin update --all
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
       loop: "{{ wp_sites }}"
 
     - name: Actualizar themes
-      command: wp theme update --all
-      become_user: "{{ item }}"
-      become_flags: "-H"
+      shell: |
+        sudo -H -u {{ item.user }} {{ wp_bin }} theme update --all
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
       loop: "{{ wp_sites }}"
 
     - name: Desactivar mantenimiento (siempre)
-      command: wp maintenance-mode deactivate
-      become_user: "{{ item }}"
-      become_flags: "-H"
+      shell: |
+        sudo -H -u {{ item.user }} {{ wp_bin }} maintenance-mode deactivate
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
       loop: "{{ wp_sites }}"
       failed_when: false
+
