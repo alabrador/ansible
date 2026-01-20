@@ -24,10 +24,6 @@
         timeout: 3600
       register: cyberpanel_upgrade
 
-    - name: Mostrar salida de la actualización
-      debug:
-        var: cyberpanel_upgrade.stdout
-
     - name: Verificar que existe la ruta baseTemplate
       file:
         path: "{{ cyberpanel_template_path }}"
