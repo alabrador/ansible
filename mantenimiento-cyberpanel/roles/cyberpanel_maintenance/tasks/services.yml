@@ -9,14 +9,3 @@
       loop: "{{ cyberpanel_services }}"
       loop_control:
         label: "{{ item }}"
-
-    - name: Mostrar resultado de "{{ item }}"
-      debug:
-        msg: >-
-          Servicio {{ item }}:
-          Estado antes: {{ service_result.results[loop.index0].status }}
-          Cambio realizado: {{ service_result.results[loop.index0].changed }}
-  rescue:
-    - name: Error gestionando servicio "{{ item }}"
-      debug:
-        msg: "⚠️ No se pudo iniciar o verificar el servicio {{ item }}. Revisa manualmente."
