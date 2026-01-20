@@ -28,3 +28,26 @@
     path: "{{ item.path }}"
     state: absent
   loop: "{{ old_logs.files }}"
+
+- name: Buscar backups en /home/backup
+  find:
+    paths: /home/backup
+    file_type: directory
+  register: backup_dirs
+
+- name: Ordenar backups por fecha (más reciente primero)
+  set_fact:
+    backups_sorted: "{{ backup_dirs.files | sort(attribute='mtime', reverse=true) }}"
+
+- name: Mostrar backup que se conservará
+  debug:
+    msg: "Se conservará el backup: {{ backups_sorted[0].path }}"
+  when: backups_sorted | length > 0
+
+- name: Eliminar backups antiguos (mantener solo el más reciente)
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ backups_sorted[1:] }}"
+  when: backups_sorted | length > 1
+
