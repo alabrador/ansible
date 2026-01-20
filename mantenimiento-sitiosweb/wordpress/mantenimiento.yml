@@ -53,10 +53,12 @@
 
     - name: Actualizar plugins
       shell: |
-        sudo -H -u {{ item.user }} {{ wp_bin }} plugin update --all
+        sudo -H -u {{ item.user }} {{ wp_bin }} plugin update --all \
+        --exclude=advanced-custom-fields-pro,js_composer
       args:
         chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
       loop: "{{ wp_sites }}"
+      failed_when: false
 
     - name: Actualizar themes
       shell: |
