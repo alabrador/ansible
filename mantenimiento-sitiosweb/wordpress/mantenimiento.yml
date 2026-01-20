@@ -19,57 +19,47 @@
         dest: /usr/local/bin/wp
         mode: '0755'
 
-    - name: Activar modo mantenimiento
+    - name: Activar mantenimiento
       command: wp maintenance-mode activate
+      become_user: "{{ item }}"
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "/home/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
-      register: maintenance_on
       failed_when: false
 
-    - name: Actualizar WordPress core
+    - name: Actualizar core
       command: wp core update
+      become_user: "{{ item }}"
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "/home/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
 
-    - name: Actualizar base de datos WordPress
+    - name: Actualizar DB
       command: wp core update-db
+      become_user: "{{ item }}"
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "/home/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
       failed_when: false
 
     - name: Actualizar plugins
       command: wp plugin update --all
+      become_user: "{{ item }}"
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "/home/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
 
     - name: Actualizar themes
       command: wp theme update --all
+      become_user: "{{ item }}"
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "/home/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
 
-    - name: Limpiar cache WordPress
-      command: wp cache flush
-      args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
-      loop: "{{ wp_sites }}"
-      failed_when: false
-
-    - name: Ajustar permisos recomendados
-      file:
-        path: "{{ wp_base_path }}/{{ item }}/public_html"
-        owner: "{{ item }}"
-        group: "{{ item }}"
-        recurse: yes
-      loop: "{{ wp_sites }}"
-
-    - name: Desactivar modo mantenimiento
+    - name: Desactivar mantenimiento
       command: wp maintenance-mode deactivate
+      become_user: "{{ item }}"
       args:
-        chdir: "{{ wp_base_path }}/{{ item }}/public_html"
+        chdir: "/home/{{ item }}/public_html"
       loop: "{{ wp_sites }}"
       failed_when: false
