@@ -1,12 +1,3 @@
-- name: Comprobar puertos abiertos
-  shell: ss -tuln | grep -E "{{ cyberpanel_ports | join('|') }}"
-  register: ports
-  changed_when: false
-  failed_when: false
-
-- debug:
-    msg: "{{ ports.stdout_lines }}"
-
 - name: Verificar estado OpenLiteSpeed
   command: /usr/local/lsws/bin/lswsctrl status
   register: lsws_status
