@@ -1,0 +1,65 @@
+---
+- name: Chequeo de servidor y servicios
+  hosts: srv-cpweb01, srv-cpweb02
+  become: yes
+  gather_facts: yes
+
+  vars:
+    services_to_check:
+      - lscpd
+      - lsws
+      - mariadb
+      - redis
+
+    disks_to_check:
+      - /
+      - /home
+      - /home/backup
+
+  tasks:
+
+    - name: Chequear estado de servicios
+      shell: "systemctl is-active {{ item }} || true"
+      loop: "{{ services_to_check }}"
+      register: service_status
+      changed_when: false
+
+    - name: Formatear resumen servicios
+      set_fact:
+        services_report: |
+          {% for r in service_status.results %}
+          {{ r.item }} : {{ 'OK' if r.stdout == 'active' else 'DOWN' }}
+          {% endfor %}
+
+    - name: Chequear particiones de disco
+      shell: "df -hP {{ item }} | tail -1"
+      loop: "{{ disks_to_check }}"
+      register: disk_status
+      changed_when: false
+
+    - name: Formatear resumen discos
+      set_fact:
+        disk_report: |
+          {% for d in disk_status.results %}
+          {{ d.item }} : {{ d.stdout.split()[4] }} usado ({{ d.stdout.split()[3] }} libres)
+          {% endfor %}
+
+    - name: Enviar resumen por Telegram
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            🖥 *Estado del servidor*
+            Host: {{ inventory_hostname }}
+            Fecha: {{ ansible_date_time.iso8601 }}
+
+            🔧 *Servicios*
+            {{ services_report }}
+
+            💾 *Discos*
+            {{ disk_report }}
+      delegate_to: localhost
+      become: false
