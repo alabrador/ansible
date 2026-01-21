@@ -1,7 +1,9 @@
 ---
-- name: Mantenimiento basico WordPress
+- name: Mantenimiento WordPress Producción
   hosts: srv-cpweb02
   become: yes
+  gather_facts: yes
+
   vars:
     wp_base_path: /home
     wp_bin: /usr/local/bin/wp
@@ -16,64 +18,117 @@
       - domain: nutribeninternational.com
         user: nutri7976
 
+  pre_tasks:
+
+    - name: Avisar inicio mantenimiento
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            🚧 *Inicio mantenimiento WordPress*
+            🖥 Servidor: {{ inventory_hostname }}
+            🌐 Sitios: {{ wp_sites | map(attribute='domain') | join(', ') }}
+            🕒 {{ ansible_date_time.iso8601 }}
+      delegate_to: localhost
+
   tasks:
 
-    - name: Comprobar si WP-CLI esta instalado
-      stat:
-        path: "{{ wp_bin }}"
-      register: wpcli_bin
+    - name: Mantenimiento WordPress
+      block:
 
-    - name: Descargar e instalar WP-CLI
-      get_url:
-        url: https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-        dest: "{{ wp_bin }}"
-        mode: '0755'
-      when: not wpcli_bin.stat.exists
+        - name: Activar mantenimiento
+          shell: >
+            sudo -H -u {{ item.user }} {{ wp_bin }} maintenance-mode activate
+          args:
+            chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
+          loop: "{{ wp_sites }}"
+          failed_when: false
 
-    - name: Activar mantenimiento
-      shell: |
-        sudo -H -u {{ item.user }} {{ wp_bin }} maintenance-mode activate
-      args:
-        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
-      loop: "{{ wp_sites }}"
-      failed_when: false
+        - name: Actualizar core
+          shell: >
+            sudo -H -u {{ item.user }} {{ wp_bin }} core update
+          args:
+            chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
+          loop: "{{ wp_sites }}"
+          register: core_update
+          failed_when: false
 
-    - name: Actualizar WordPress core
-      shell: |
-        sudo -H -u {{ item.user }} {{ wp_bin }} core update
-      args:
-        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
-      loop: "{{ wp_sites }}"
+        - name: Actualizar plugins
+          shell: >
+            sudo -H -u {{ item.user }} {{ wp_bin }} plugin update --all
+            --exclude=advanced-custom-fields-pro,js_composer
+          args:
+            chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
+          loop: "{{ wp_sites }}"
+          register: plugin_update
+          failed_when: false
 
-    - name: Actualizar base de datos WordPress
-      shell: |
-        sudo -H -u {{ item.user }} {{ wp_bin }} core update-db
-      args:
-        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
-      loop: "{{ wp_sites }}"
-      failed_when: false
+        - name: Actualizar themes
+          shell: >
+            sudo -H -u {{ item.user }} {{ wp_bin }} theme update --all
+          args:
+            chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
+          loop: "{{ wp_sites }}"
+          register: theme_update
+          failed_when: false
 
-    - name: Actualizar plugins
-      shell: |
-        sudo -H -u {{ item.user }} {{ wp_bin }} plugin update --all \
-        --exclude=advanced-custom-fields-pro,js_composer
-      args:
-        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
-      loop: "{{ wp_sites }}"
-      failed_when: false
+        - name: Notificar errores detectados
+          uri:
+            url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+            method: POST
+            body_format: form-urlencoded
+            body:
+              chat_id: "{{ telegram_chat_id }}"
+              text: |
+                🚨 *Error en mantenimiento WordPress*
+                🌐 Sitio: {{ item.item.domain }}
+                📦 Tarea: {{ item.invocation.module_name }}
+                ❌ Código retorno: {{ item.rc }}
+          loop: >
+            {{
+              (core_update.results + plugin_update.results + theme_update.results)
+              | selectattr('rc', 'ne', 0)
+              | list
+            }}
+          when: >
+            (
+              (core_update.results + plugin_update.results + theme_update.results)
+              | selectattr('rc', 'ne', 0)
+              | list
+              | length
+            ) > 0
+          delegate_to: localhost
 
-    - name: Actualizar themes
-      shell: |
-        sudo -H -u {{ item.user }} {{ wp_bin }} theme update --all
-      args:
-        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
-      loop: "{{ wp_sites }}"
+      always:
 
-    - name: Desactivar mantenimiento (siempre)
-      shell: |
-        sudo -H -u {{ item.user }} {{ wp_bin }} maintenance-mode deactivate
-      args:
-        chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
-      loop: "{{ wp_sites }}"
-      failed_when: false
+        - name: Desactivar mantenimiento (SIEMPRE)
+          shell: >
+            sudo -H -u {{ item.user }} {{ wp_bin }} maintenance-mode deactivate
+          args:
+            chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
+          loop: "{{ wp_sites }}"
+          failed_when: false
+
+  post_tasks:
+
+    - name: Resumen final mantenimiento
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            ✅ *Mantenimiento WordPress finalizado*
+            🖥 Servidor: {{ inventory_hostname }}
+            🌐 Sitios totales: {{ wp_sites | length }}
+            🔄 Core OK: {{ core_update.results | selectattr('rc','eq',0) | list | length }}
+            🔌 Plugins OK: {{ plugin_update.results | selectattr('rc','eq',0) | list | length }}
+            🎨 Themes OK: {{ theme_update.results | selectattr('rc','eq',0) | list | length }}
+            🕒 {{ ansible_date_time.iso8601 }}
+      delegate_to: localhost
+
 
