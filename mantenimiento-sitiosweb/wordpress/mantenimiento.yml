@@ -28,11 +28,12 @@
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: |
-            🚧 *Inicio mantenimiento WordPress*
+            🚧 Inicio mantenimiento WordPress
             🖥 Servidor: {{ inventory_hostname }}
             🌐 Sitios: {{ wp_sites | map(attribute='domain') | join(', ') }}
             🕒 {{ ansible_date_time.iso8601 }}
       delegate_to: localhost
+      become: false
 
   tasks:
 
@@ -40,38 +41,39 @@
       block:
 
         - name: Activar mantenimiento
-          shell: >
-            sudo -H -u {{ item.user }} {{ wp_bin }} maintenance-mode activate
+          shell: "{{ wp_bin }} maintenance-mode activate"
           args:
             chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
           loop: "{{ wp_sites }}"
+          become_user: "{{ item.user }}"
           failed_when: false
 
         - name: Actualizar core
-          shell: >
-            sudo -H -u {{ item.user }} {{ wp_bin }} core update
+          shell: "{{ wp_bin }} core update"
           args:
             chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
           loop: "{{ wp_sites }}"
+          become_user: "{{ item.user }}"
           register: core_update
           failed_when: false
 
         - name: Actualizar plugins
           shell: >
-            sudo -H -u {{ item.user }} {{ wp_bin }} plugin update --all
+            {{ wp_bin }} plugin update --all
             --exclude=advanced-custom-fields-pro,js_composer
           args:
             chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
           loop: "{{ wp_sites }}"
+          become_user: "{{ item.user }}"
           register: plugin_update
           failed_when: false
 
         - name: Actualizar themes
-          shell: >
-            sudo -H -u {{ item.user }} {{ wp_bin }} theme update --all
+          shell: "{{ wp_bin }} theme update --all"
           args:
             chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
           loop: "{{ wp_sites }}"
+          become_user: "{{ item.user }}"
           register: theme_update
           failed_when: false
 
@@ -83,9 +85,8 @@
             body:
               chat_id: "{{ telegram_chat_id }}"
               text: |
-                🚨 *Error en mantenimiento WordPress*
+                🚨 Error en mantenimiento WordPress
                 🌐 Sitio: {{ item.item.domain }}
-                📦 Tarea: {{ item.invocation.module_name }}
                 ❌ Código retorno: {{ item.rc }}
           loop: >
             {{
@@ -101,15 +102,16 @@
               | length
             ) > 0
           delegate_to: localhost
+          become: false
 
       always:
 
         - name: Desactivar mantenimiento (SIEMPRE)
-          shell: >
-            sudo -H -u {{ item.user }} {{ wp_bin }} maintenance-mode deactivate
+          shell: "{{ wp_bin }} maintenance-mode deactivate"
           args:
             chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
           loop: "{{ wp_sites }}"
+          become_user: "{{ item.user }}"
           failed_when: false
 
   post_tasks:
@@ -122,7 +124,7 @@
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: |
-            ✅ *Mantenimiento WordPress finalizado*
+            ✅ Mantenimiento WordPress finalizado
             🖥 Servidor: {{ inventory_hostname }}
             🌐 Sitios totales: {{ wp_sites | length }}
             🔄 Core OK: {{ core_update.results | selectattr('rc','eq',0) | list | length }}
@@ -130,5 +132,4 @@
             🎨 Themes OK: {{ theme_update.results | selectattr('rc','eq',0) | list | length }}
             🕒 {{ ansible_date_time.iso8601 }}
       delegate_to: localhost
-
-
+      become: false
