@@ -60,7 +60,7 @@
         - name: Actualizar plugins
           shell: >
             {{ wp_bin }} plugin update --all
-            --exclude=advanced-custom-fields-pro,js_composer
+            --exclude=advanced-custom-fields-pro,js_composer,admin-menu-editor-pro,ame-branding-add-on,wp-toolbar-editor
           args:
             chdir: "{{ wp_base_path }}/{{ item.domain }}/public_html"
           loop: "{{ wp_sites }}"
