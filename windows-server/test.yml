@@ -1,5 +1,5 @@
 ---
-- name: Verificar y reiniciar CheckmkService + Telegram
+- name: Verificar y reiniciar CheckmkService (sin Telegram)
   hosts: all
   gather_facts: no
   become: false
@@ -15,7 +15,7 @@
       set_fact:
         service_status: "{{ (service_raw.stdout | from_json).Status }}"
 
-    - name: Mostrar estado del servicio
+    - name: Mostrar estado actual del servicio
       debug:
         msg: "Estado actual de CheckmkService: {{ service_status }}"
 
@@ -27,17 +27,11 @@
       when: service_status != 'Running'
       register: service_result
 
-    - name: Enviar mensaje por Telegram si se inició
-      uri:
-        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
-        method: POST
-        body_format: json
-        body:
-          chat_id: "{{ telegram_chat_id }}"
-          text: >
-            {% if service_status != 'Running' %}
-            Servicio CheckmkService estaba detenido y se ha iniciado correctamente.
-            {% else %}
-            Servicio CheckmkService ya estaba en ejecución, no se hizo nada.
-            {% endif %}
-      when: service_status != 'Running'
+    - name: Mostrar resultado de iniciar el servicio
+      debug:
+        msg: >
+          {% if service_status != 'Running' %}
+          Servicio CheckmkService estaba detenido y se ha iniciado correctamente.
+          {% else %}
+          Servicio CheckmkService ya estaba en ejecución, no se hizo nada.
+          {% endif %}
