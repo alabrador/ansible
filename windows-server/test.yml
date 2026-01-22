@@ -1,21 +1,25 @@
 ---
 - name: Estado de uso de disco en Windows
-  hosts: srv-dnsext01
+  hosts: all
   gather_facts: no
   become: false
 
   tasks:
 
-    - name: Obtener uso de disco (forzar array)
+    - name: Obtener uso de disco
       win_shell: |
-        @(Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
-        Select-Object DeviceID, Size, FreeSpace) |
-        ConvertTo-Json
+        Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
+        Select-Object DeviceID, Size, FreeSpace |
+        ConvertTo-Json -Compress
       register: disk_raw
 
     - name: Convertir JSON a variable Ansible
       set_fact:
-        disk_info: "{{ disk_raw.stdout | from_json }}"
+        disk_info_raw: "{{ disk_raw.stdout | from_json }}"
+
+    - name: Normalizar discos a lista
+      set_fact:
+        disk_info: "{{ disk_info_raw if disk_info_raw is iterable and disk_info_raw is not string else [disk_info_raw] }}"
 
     - name: Mostrar estado de discos
       debug:
