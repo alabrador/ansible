@@ -1,0 +1,61 @@
+---
+- name: Monitorear estado del puerto del Switch y notificar por Telegram
+  hosts: sw_afsa_dist_ctrl
+  become: yes
+  gather_facts: yes
+  vars:
+    interface_name: "GigabitEthernet 0/0/2"
+    
+  tasks:
+    - name: Ejecutar comando display interface en el switch
+      raw: display interface {{ interface_name }}
+      register: interface_output
+      
+    - name: Extraer estado del interface
+      set_fact:
+        interface_status: "{{ interface_output.stdout_lines[0].split(':')[1].strip() }}"
+      
+    - name: Mostrar estado actual
+      debug:
+        msg: "Estado del puerto {{ interface_name }}: {{ interface_status }}"
+    
+    - name: Enviar notificación por Telegram si el puerto está caído
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            ⚠️ ALERTA - Puerto Caído ⚠️
+            
+            Switch: {{ inventory_hostname }}
+            Puerto: {{ interface_name }}
+            Estado: {{ interface_status }}
+            Fecha: {{ ansible_date_time.iso8601 }}
+            
+            El Access Point conectado podría estar fuera de servicio.
+        status_code: 200
+      when: interface_status != "UP"
+      delegate_to: localhost
+      
+    - name: Enviar notificación de recuperación si el puerto está UP
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            ✅ Puerto Recuperado ✅
+            
+            Switch: {{ inventory_hostname }}
+            Puerto: {{ interface_name }}
+            Estado: {{ interface_status }}
+            Fecha: {{ ansible_date_time.iso8601 }}
+            
+            El Access Point está operativo.
+        status_code: 200
+      when: interface_status == "UP"
+      delegate_to: localhost
+      tags: notify_up
