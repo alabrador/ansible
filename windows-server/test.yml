@@ -1,5 +1,5 @@
 ---
-- name: Verificar y reiniciar CheckmkService (sin Telegram)
+- name: Verificar y reiniciar CheckmkService
   hosts: all
   gather_facts: no
   become: false
