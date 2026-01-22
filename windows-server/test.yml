@@ -7,9 +7,9 @@
   tasks:
 
     - name: Ejecutar ipconfig
-      win_shell: ipconfig /all
-      register: ipconfig_result
+      win_shell: netstat -ano | findstr :10000
+      register: netstat_result
 
-    - name: Mostrar salida de ipconfig
+    - name: Mostrar salida de netstat
       debug:
-        msg: "{{ ipconfig_result.stdout }}"
+        msg: "{{ netstat_result.stdout }}"
