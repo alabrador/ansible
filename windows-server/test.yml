@@ -1,15 +1,43 @@
 ---
-- name: Probar conectividad Windows – ipconfig
+- name: Verificar y reiniciar CheckmkService + Telegram
   hosts: all
   gather_facts: no
   become: false
 
   tasks:
 
-    - name: Ejecutar ipconfig
-      win_shell: Get-Service -Name dns
-      register: service_dns_result
+    - name: Obtener estado del servicio CheckmkService
+      win_shell: |
+        Get-Service -Name CheckmkService | Select-Object Status | ConvertTo-Json
+      register: service_raw
 
-    - name: Mostrar salida de service
+    - name: Convertir a variable Ansible
+      set_fact:
+        service_status: "{{ (service_raw.stdout | from_json).Status }}"
+
+    - name: Mostrar estado del servicio
       debug:
-        msg: "{{ service_dns_result.stdout }}"
+        msg: "Estado actual de CheckmkService: {{ service_status }}"
+
+    - name: Iniciar el servicio si está detenido
+      win_service:
+        name: CheckmkService
+        start_mode: auto
+        state: started
+      when: service_status != 'Running'
+      register: service_result
+
+    - name: Enviar mensaje por Telegram si se inició
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: >
+            {% if service_status != 'Running' %}
+            Servicio CheckmkService estaba detenido y se ha iniciado correctamente.
+            {% else %}
+            Servicio CheckmkService ya estaba en ejecución, no se hizo nada.
+            {% endif %}
+      when: service_status != 'Running'
