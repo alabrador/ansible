@@ -1,6 +1,6 @@
 ---
 - name: Test conexion Windows desde AWX
-  hosts: srv-test
+  hosts: srv-dnsext01
   gather_facts: no
   tasks:
     - name: Ping Windows
