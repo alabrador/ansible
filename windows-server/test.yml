@@ -1,0 +1,7 @@
+---
+- name: Test conexion Windows desde AWX
+  hosts: srv-test
+  gather_facts: no
+  tasks:
+    - name: Ping Windows
+      win_ping:
