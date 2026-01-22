@@ -1,39 +1,15 @@
 ---
-- name: Estado de uso de disco en Windows
+- name: Probar conectividad Windows – ipconfig
   hosts: all
   gather_facts: no
   become: false
 
   tasks:
 
-    - name: Obtener uso de disco
-      win_shell: |
-        Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
-        Select-Object DeviceID, Size, FreeSpace |
-        ConvertTo-Json -Compress
-      register: disk_raw
+    - name: Ejecutar ipconfig
+      win_shell: ipconfig /all
+      register: ipconfig_result
 
-    - name: Convertir JSON a variable Ansible
-      set_fact:
-        disk_info_raw: "{{ disk_raw.stdout | from_json }}"
-
-    - name: Normalizar a lista
-      set_fact:
-        disk_info: >-
-          {% if disk_info_raw is mapping %}
-            [ disk_info_raw ]
-          {% elif disk_info_raw is sequence %}
-            disk_info_raw
-          {% else %}
-            []
-          {% endif %}
-
-    - name: Mostrar estado de discos
+    - name: Mostrar salida de ipconfig
       debug:
-        msg: >-
-          {% for d in disk_info %}
-          Disco {{ d.DeviceID }} :
-            Total: {{ (d.Size | int / 1024 / 1024 / 1024) | round(2) }} GB
-            Libre: {{ (d.FreeSpace | int / 1024 / 1024 / 1024) | round(2) }} GB
-            Usado: {{ ((d.Size | int - d.FreeSpace | int) * 100 / d.Size | int) | round(2) }} %
-          {% endfor %}
+        msg: "{{ ipconfig_result.stdout }}"
