@@ -1,7 +1,29 @@
 ---
-- name: Test conexion Windows desde AWX
+- name: Estado de uso de disco en Windows
   hosts: srv-dnsext01
   gather_facts: no
+  become: false
+
   tasks:
-    - name: Ping Windows
-      win_ping:
+
+    - name: Obtener uso de disco
+      win_shell: |
+        Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
+        Select-Object DeviceID, Size, FreeSpace |
+        ConvertTo-Json
+      register: disk_raw
+
+    - name: Procesar informacion de discos
+      set_fact:
+        disk_info: "{{ disk_raw.stdout | from_json }}"
+
+    - name: Mostrar estado de discos
+      debug:
+        msg: |
+          {% for d in disk_info %}
+          Disco {{ d.DeviceID }} :
+            Total: {{ (d.Size | int / 1024 / 1024 / 1024) | round(2) }} GB
+            Libre: {{ (d.FreeSpace | int / 1024 / 1024 / 1024) | round(2) }} GB
+            Usado: {{ ((d.Size | int - d.FreeSpace | int) * 100 / d.Size | int) | round(2) }} %
+          {% endfor %}
+
