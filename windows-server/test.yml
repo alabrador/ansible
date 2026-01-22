@@ -17,13 +17,20 @@
       set_fact:
         disk_info_raw: "{{ disk_raw.stdout | from_json }}"
 
-    - name: Normalizar discos a lista
+    - name: Normalizar a lista
       set_fact:
-        disk_info: "{{ disk_info_raw if disk_info_raw is iterable and disk_info_raw is not string else [disk_info_raw] }}"
+        disk_info: >-
+          {% if disk_info_raw is mapping %}
+            [ disk_info_raw ]
+          {% elif disk_info_raw is sequence %}
+            disk_info_raw
+          {% else %}
+            []
+          {% endif %}
 
     - name: Mostrar estado de discos
       debug:
-        msg: |
+        msg: >-
           {% for d in disk_info %}
           Disco {{ d.DeviceID }} :
             Total: {{ (d.Size | int / 1024 / 1024 / 1024) | round(2) }} GB
