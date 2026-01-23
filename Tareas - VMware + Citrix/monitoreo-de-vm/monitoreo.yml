@@ -1,6 +1,6 @@
 ---
 ############################################################
-# PLAY 1 - Obtener VMs Citrix desde vCenter (sin fechas)
+# PLAY 1 - Obtener VMs Citrix desde vCenter
 ############################################################
 - name: Obtener VMs Citrix desde vCenter
   hosts: localhost
@@ -8,10 +8,11 @@
 
   vars:
     vcenter_hostname: "vcenter.alter.es"
-    vcenter_user: "{{ vcenter_user }}"
-    vcenter_password: "{{ vcenter_password }}"
     validate_certs: no
     cluster_name: "CL_CITRIX"
+    vm_prefix: "SRV-CTXP"
+    vm_start: 101
+    vm_end: 145
 
   tasks:
 
@@ -24,13 +25,14 @@
         show_cluster: true
       register: vms_info
 
-    - name: Filtrar VMs del cluster CL_CITRIX
+    - name: Filtrar VMs del cluster CL_CITRIX y rango de nombre
       set_fact:
         citrix_vms: >-
           {{
             vms_info.virtual_machines
             | selectattr('cluster', 'defined')
             | selectattr('cluster', 'equalto', cluster_name)
+            | selectattr('name', 'match', '^SRV-CTXP(1[0-4][0-9]|101)$')
             | list
           }}
 
@@ -48,36 +50,27 @@
   hosts: citrix_controllers
   gather_facts: no
   become: false
-
   vars:
-    telegram_bot_token: "TU_BOT_TOKEN"
-    telegram_chat_id: "TU_CHAT_ID"
+    telegram_bot_token: "{{ telegram_bot_token }}"
+    telegram_chat_id: "{{ telegram_chat_id }}"
 
   tasks:
 
-    - name: Comprobar estado de registro en Citrix Director
+    - name: Comprobar estado de registro en Citrix Director (optimizado)
       win_shell: |
         Add-PSSnapin Citrix.*
-        $result = @()
 
-        {% for vm in hostvars['localhost'].citrix_vms %}
-        $m = Get-BrokerMachine -MachineName "{{ vm.name }}" -ErrorAction SilentlyContinue
-        if ($m) {
-          $result += [PSCustomObject]@{
-            Name              = $m.Name
-            RegistrationState = $m.RegistrationState
-            MachineCatalog    = $m.MachineCatalog
-            DeliveryGroup     = $m.DesktopGroupName
-          }
-        }
-        {% endfor %}
+        $vm_names = @( 
+          {% for i in range(vm_start, vm_end + 1) %}
+          "{{ vm_prefix }}{{ '%03d' % i }}"{% if not loop.last %}, {% endif %}
+          {% endfor %}
+        )
+
+        $result = Get-BrokerMachine -MachineName $vm_names -ErrorAction SilentlyContinue | 
+                  Select-Object Name, RegistrationState, MachineCatalog, DesktopGroupName
 
         $result | ConvertTo-Json -Depth 4
       register: citrix_status
-
-    - name: Mostrar estado Citrix
-      debug:
-        var: citrix_status.stdout
 
     - name: Filtrar VMs no registradas
       set_fact:
@@ -87,10 +80,6 @@
             | selectattr('RegistrationState', 'ne', 'Registered')
             | list
           }}
-
-    - name: Mostrar VMs no registradas
-      debug:
-        var: vms_no_registradas
 
     - name: Notificar por Telegram VMs no registradas
       community.general.telegram:
