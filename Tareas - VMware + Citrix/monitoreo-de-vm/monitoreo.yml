@@ -15,7 +15,7 @@
     cluster_name: "CL_CITRIX"
     last_boot_minutes: 10
 
-    now_utc: "{{ lookup('pipe','date -u +%Y-%m-%dT%H:%M:%SZ') | to_datetime('%Y-%m-%dT%H:%M:%SZ') }}"
+    now_epoch: "{{ lookup('pipe','date -u +%s') | int }}"
 
   tasks:
 
@@ -41,7 +41,10 @@
             | selectattr(
                 'boot_time',
                 '>=',
-                (now_utc - timedelta(minutes=last_boot_minutes))
+                (
+                  (now_epoch - (last_boot_minutes * 60))
+                  | to_datetime('%s')
+                )
               )
             | list
           }}
