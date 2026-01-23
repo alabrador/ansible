@@ -1,0 +1,88 @@
+---
+- name: Monitorear VMs de Citrix y registrar en Director
+  hosts: localhost
+  gather_facts: no
+
+  vars:
+    # Datos de vCenter
+    vcenter_hostname: "vcenter.tudominio.local"
+    vcenter_user: "{{ vcenter_user }}"       # Definido como variable AWX
+    vcenter_password: "{{ vcenter_password }}" # Definido como variable AWX
+    datacenter_name: "Datacenter-Citrix"
+    vm_folder: "CitrixVMs"
+
+    # Datos Citrix Director (delegación de PowerShell)
+    citrix_controller: "{{ citrix_controller }}"  # Variable AWX
+    citrix_user: "{{ citrix_user }}"              # Variable AWX
+    citrix_password: "{{ citrix_password }}"      # Variable AWX
+
+    # Telegram (variables definidas en AWX)
+    telegram_bot_token: "{{ telegram_bot_token }}"
+    telegram_chat_id: "{{ telegram_chat_id }}"
+
+    # Tiempo límite de reinicio (en minutos)
+    last_boot_minutes: 10
+
+  tasks:
+
+    - name: Obtener todas las VMs en vCenter
+      community.vmware.vmware_vm_info:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_user }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: no
+        folder: "{{ vm_folder }}"
+      register: vms_info
+
+    - name: Filtrar VMs reiniciadas en los últimos {{ last_boot_minutes }} minutos
+      set_fact:
+        restarted_vms: >-
+          {{
+            vms_info.virtual_machines
+            | selectattr('runtime.bootTime', 'defined')
+            | selectattr('runtime.powerState', 'equalto', 'poweredOn')
+            | selectattr('runtime.bootTime', '>=', (ansible_date_time.iso8601 | to_datetime('%Y-%m-%dT%H:%M:%SZ') - timedelta(minutes=last_boot_minutes)))
+            | list
+          }}
+
+    - name: Mostrar VMs reiniciadas
+      debug:
+        var: restarted_vms
+
+    - name: Verificar registro de cada VM en Citrix Director
+      win_shell: |
+        Add-PSSnapin Citrix.*
+        Get-BrokerMachine -MachineName "{{ item.name }}" | Select-Object Name, MachineCatalog, DeliveryGroup, RegistrationState | ConvertTo-Json
+      loop: "{{ restarted_vms }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: citrix_status
+      delegate_to: "{{ citrix_controller }}"
+
+    - name: Construir mensaje de estado
+      set_fact:
+        telegram_message: |
+          ⚠️ ALERTA - VMs no registradas en Citrix Director ⚠️
+          {% for vm in citrix_status.results %}
+            {% set vm_info = vm.stdout | from_json %}
+            {% if vm_info.RegistrationState != 'Registered' %}
+              VM: {{ vm_info.Name }}
+              Catalog: {{ vm_info.MachineCatalog }}
+              DeliveryGroup: {{ vm_info.DeliveryGroup }}
+              Estado: {{ vm_info.RegistrationState }}
+              ------------------------------
+            {% endif %}
+          {% endfor %}
+      when: citrix_status.results | selectattr('stdout', 'defined') | list | length > 0
+
+    - name: Enviar notificación por Telegram si hay VMs no registradas
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: "{{ telegram_message }}"
+        status_code: 200
+      delegate_to: localhost
+      when: telegram_message is defined and telegram_message != ''
