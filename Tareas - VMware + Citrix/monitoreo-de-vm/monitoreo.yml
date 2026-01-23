@@ -50,9 +50,6 @@
   hosts: citrix_controllers
   gather_facts: no
   become: false
-  vars:
-    telegram_bot_token: "{{ telegram_bot_token }}"
-    telegram_chat_id: "{{ telegram_chat_id }}"
 
   tasks:
 
@@ -81,16 +78,26 @@
             | list
           }}
 
-    - name: Notificar por Telegram VMs no registradas
-      community.general.telegram:
-        token: "{{ telegram_bot_token }}"
-        chat_id: "{{ telegram_chat_id }}"
-        msg: >-
+    - name: Preparar mensaje de Telegram
+      set_fact:
+        telegram_message: >-
           {%- if vms_no_registradas | length > 0 -%}
-          ⚠️ VMs NO registradas en Citrix Director:
+          ⚠️ *VMs NO registradas en Citrix Director:*
           {%- for vm in vms_no_registradas -%}
           - {{ vm.Name }} (Estado: {{ vm.RegistrationState }})
           {%- endfor -%}
           {%- else -%}
           ✅ Todas las VMs están registradas correctamente.
           {%- endif -%}
+
+    - name: Enviar notificación por Telegram
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: "{{ telegram_message }}"
+          parse_mode: "Markdown"
+      delegate_to: localhost
+      become: false
