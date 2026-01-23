@@ -1,6 +1,6 @@
 ---
 ############################################################
-# PLAY 1 - Obtener VMs Citrix reiniciadas desde vCenter
+# PLAY 1 - Detectar VMs Citrix reiniciadas en vCenter
 ############################################################
 - name: Detectar VMs Citrix reiniciadas en vCenter
   hosts: localhost
@@ -12,28 +12,30 @@
     vcenter_password: "{{ vcenter_password }}"
     validate_certs: no
 
-    datacenter_name: "MATEO INURRIA"
+    # Cluster Citrix
     cluster_name: "CL_CITRIX"
 
+    # Ventana de tiempo (minutos)
     last_boot_minutes: 10
 
   tasks:
 
-    - name: Obtener todas las VMs del cluster CL_CITRIX
+    - name: Obtener TODAS las VMs del vCenter
       community.vmware.vmware_vm_info:
         hostname: "{{ vcenter_hostname }}"
         username: "{{ vcenter_user }}"
         password: "{{ vcenter_password }}"
         validate_certs: "{{ validate_certs }}"
-        datacenter: "{{ datacenter_name }}"
-        cluster: "{{ cluster_name }}"
+        show_cluster: true
       register: vms_info
 
-    - name: Filtrar VMs encendidas reiniciadas recientemente
+    - name: Filtrar VMs del cluster CL_CITRIX reiniciadas recientemente
       set_fact:
         restarted_vms: >-
           {{
             vms_info.virtual_machines
+            | selectattr('cluster', 'defined')
+            | selectattr('cluster', 'equalto', cluster_name)
             | selectattr('runtime.powerState', 'equalto', 'poweredOn')
             | selectattr('runtime.bootTime', 'defined')
             | selectattr(
@@ -46,28 +48,24 @@
             | list
           }}
 
-    - name: Mostrar VMs reiniciadas
+    - name: Mostrar VMs filtradas
       debug:
-        msg: "VM {{ item.name }} reiniciada en {{ item.runtime.bootTime }}"
+        msg: "VM {{ item.name }} ({{ item.cluster }}) reiniciada en {{ item.runtime.bootTime }}"
       loop: "{{ restarted_vms }}"
       loop_control:
         label: "{{ item.name }}"
 
 ############################################################
-# PLAY 2 - Validar registro de VMs en Citrix Director
+# PLAY 2 - Verificar registro de VMs en Citrix Director
 ############################################################
 - name: Verificar registro de VMs en Citrix Director
   hosts: citrix_controllers
   gather_facts: no
   become: false
 
-  vars:
-    telegram_bot_token: "{{ telegram_bot_token }}"
-    telegram_chat_id: "{{ telegram_chat_id }}"
-
   tasks:
 
-    - name: Comprobar estado de VMs en Citrix Director
+    - name: Comprobar estado de VMs Citrix
       win_shell: |
         Add-PSSnapin Citrix.*
         $result = @()
@@ -87,32 +85,6 @@
         $result | ConvertTo-Json
       register: citrix_status
 
-    - name: Construir mensaje de alerta para Telegram
-      set_fact:
-        telegram_message: |
-          ⚠️ ALERTA CITRIX – VMs no registradas ⚠️
-
-          {% set vms = citrix_status.stdout | from_json %}
-          {% for vm in vms %}
-          {% if vm.RegistrationState != 'Registered' %}
-          🖥️ VM: {{ vm.Name }}
-          📦 Catálogo: {{ vm.MachineCatalog }}
-          👥 Delivery Group: {{ vm.DeliveryGroup }}
-          ❌ Estado: {{ vm.RegistrationState }}
-          ----------------------------
-          {% endif %}
-          {% endfor %}
-      when: citrix_status.stdout is defined and citrix_status.stdout != ""
-
-    - name: Enviar alerta por Telegram si hay VMs no registradas
-      uri:
-        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
-        method: POST
-        body_format: json
-        body:
-          chat_id: "{{ telegram_chat_id }}"
-          text: "{{ telegram_message }}"
-        status_code: 200
-      when:
-        - telegram_message is defined
-        - "'VM:' in telegram_message"
+    - name: Mostrar resultado Citrix
+      debug:
+        var: citrix_status.stdout
