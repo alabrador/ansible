@@ -12,10 +12,7 @@
     vcenter_password: "{{ vcenter_password }}"
     validate_certs: no
 
-    # Cluster Citrix
     cluster_name: "CL_CITRIX"
-
-    # Ventana de tiempo (minutos)
     last_boot_minutes: 10
 
   tasks:
@@ -36,10 +33,11 @@
             vms_info.virtual_machines
             | selectattr('cluster', 'defined')
             | selectattr('cluster', 'equalto', cluster_name)
-            | selectattr('runtime.powerState', 'equalto', 'poweredOn')
-            | selectattr('runtime.bootTime', 'defined')
+            | selectattr('power_state', 'defined')
+            | selectattr('power_state', 'equalto', 'poweredOn')
+            | selectattr('boot_time', 'defined')
             | selectattr(
-                'runtime.bootTime',
+                'boot_time',
                 '>=',
                 (ansible_date_time.iso8601
                  | to_datetime('%Y-%m-%dT%H:%M:%SZ')
@@ -50,7 +48,7 @@
 
     - name: Mostrar VMs filtradas
       debug:
-        msg: "VM {{ item.name }} ({{ item.cluster }}) reiniciada en {{ item.runtime.bootTime }}"
+        msg: "VM {{ item.name }} ({{ item.cluster }}) reiniciada en {{ item.boot_time }}"
       loop: "{{ restarted_vms }}"
       loop_control:
         label: "{{ item.name }}"
