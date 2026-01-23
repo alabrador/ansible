@@ -1,8 +1,8 @@
 ---
 ############################################################
-# PLAY 1 - Detectar VMs Citrix reiniciadas en vCenter
+# PLAY 1 - Obtener VMs Citrix desde vCenter (sin fechas)
 ############################################################
-- name: Detectar VMs Citrix reiniciadas en vCenter
+- name: Obtener VMs Citrix desde vCenter
   hosts: localhost
   gather_facts: no
 
@@ -11,11 +11,7 @@
     vcenter_user: "{{ vcenter_user }}"
     vcenter_password: "{{ vcenter_password }}"
     validate_certs: no
-
     cluster_name: "CL_CITRIX"
-    last_boot_minutes: 10
-
-    now_epoch: "{{ lookup('pipe','date -u +%s') | int }}"
 
   tasks:
 
@@ -28,50 +24,43 @@
         show_cluster: true
       register: vms_info
 
-    - name: Filtrar VMs del cluster CL_CITRIX reiniciadas recientemente
+    - name: Filtrar VMs del cluster CL_CITRIX
       set_fact:
-        restarted_vms: >-
+        citrix_vms: >-
           {{
             vms_info.virtual_machines
             | selectattr('cluster', 'defined')
             | selectattr('cluster', 'equalto', cluster_name)
-            | selectattr('power_state', 'defined')
-            | selectattr('power_state', 'equalto', 'poweredOn')
-            | selectattr('boot_time', 'defined')
-            | selectattr(
-                'boot_time',
-                '>=',
-                (
-                  (now_epoch - (last_boot_minutes * 60))
-                  | to_datetime('%s')
-                )
-              )
             | list
           }}
 
-    - name: Mostrar VMs filtradas
+    - name: Mostrar VMs detectadas
       debug:
-        msg: "VM {{ item.name }} ({{ item.cluster }}) reiniciada en {{ item.boot_time }}"
-      loop: "{{ restarted_vms }}"
+        msg: "VM {{ item.name }} en cluster {{ item.cluster }}"
+      loop: "{{ citrix_vms }}"
       loop_control:
         label: "{{ item.name }}"
 
 ############################################################
-# PLAY 2 - Verificar registro de VMs en Citrix Director
+# PLAY 2 - Verificar registro en Citrix Director
 ############################################################
 - name: Verificar registro de VMs en Citrix Director
   hosts: citrix_controllers
   gather_facts: no
   become: false
 
+  vars:
+    telegram_bot_token: "TU_BOT_TOKEN"
+    telegram_chat_id: "TU_CHAT_ID"
+
   tasks:
 
-    - name: Comprobar estado de VMs Citrix
+    - name: Comprobar estado de registro en Citrix Director
       win_shell: |
         Add-PSSnapin Citrix.*
         $result = @()
 
-        {% for vm in hostvars['localhost'].restarted_vms %}
+        {% for vm in hostvars['localhost'].citrix_vms %}
         $m = Get-BrokerMachine -MachineName "{{ vm.name }}" -ErrorAction SilentlyContinue
         if ($m) {
           $result += [PSCustomObject]@{
@@ -83,9 +72,36 @@
         }
         {% endfor %}
 
-        $result | ConvertTo-Json
+        $result | ConvertTo-Json -Depth 4
       register: citrix_status
 
-    - name: Mostrar resultado Citrix
+    - name: Mostrar estado Citrix
       debug:
         var: citrix_status.stdout
+
+    - name: Filtrar VMs no registradas
+      set_fact:
+        vms_no_registradas: >-
+          {{
+            (citrix_status.stdout | from_json)
+            | selectattr('RegistrationState', 'ne', 'Registered')
+            | list
+          }}
+
+    - name: Mostrar VMs no registradas
+      debug:
+        var: vms_no_registradas
+
+    - name: Notificar por Telegram VMs no registradas
+      community.general.telegram:
+        token: "{{ telegram_bot_token }}"
+        chat_id: "{{ telegram_chat_id }}"
+        msg: >-
+          {%- if vms_no_registradas | length > 0 -%}
+          ⚠️ VMs NO registradas en Citrix Director:
+          {%- for vm in vms_no_registradas -%}
+          - {{ vm.Name }} (Estado: {{ vm.RegistrationState }})
+          {%- endfor -%}
+          {%- else -%}
+          ✅ Todas las VMs están registradas correctamente.
+          {%- endif -%}
