@@ -1,10 +1,12 @@
 ---
-- name: Monitorizar VMs Citrix del cluster CL_CITRIX y validar registro en Director
+############################################################
+# PLAY 1 - Obtener VMs Citrix reiniciadas desde vCenter
+############################################################
+- name: Detectar VMs Citrix reiniciadas en vCenter
   hosts: localhost
   gather_facts: no
 
   vars:
-    # vCenter
     vcenter_hostname: "vcenter.alter.es"
     vcenter_user: "{{ vcenter_user }}"
     vcenter_password: "{{ vcenter_password }}"
@@ -13,21 +15,11 @@
     datacenter_name: "MATEO INURRIA"
     cluster_name: "CL_CITRIX"
 
-    # Citrix
-    citrix_controller: "{{ citrix_controller }}"
-    citrix_user: "{{ citrix_user }}"
-    citrix_password: "{{ citrix_password }}"
-
-    # Telegram
-    telegram_bot_token: "{{ telegram_bot_token }}"
-    telegram_chat_id: "{{ telegram_chat_id }}"
-
-    # Ventana de reinicio
     last_boot_minutes: 10
 
   tasks:
 
-    - name: Obtener VMs del cluster CL_CITRIX
+    - name: Obtener todas las VMs del cluster CL_CITRIX
       community.vmware.vmware_vm_info:
         hostname: "{{ vcenter_hostname }}"
         username: "{{ vcenter_user }}"
@@ -56,45 +48,63 @@
 
     - name: Mostrar VMs reiniciadas
       debug:
-        msg: >
-          VM {{ item.name }} reiniciada en {{ item.runtime.bootTime }}
+        msg: "VM {{ item.name }} reiniciada en {{ item.runtime.bootTime }}"
       loop: "{{ restarted_vms }}"
       loop_control:
         label: "{{ item.name }}"
 
-    - name: Verificar estado en Citrix Director
+############################################################
+# PLAY 2 - Validar registro de VMs en Citrix Director
+############################################################
+- name: Verificar registro de VMs en Citrix Director
+  hosts: citrix_controllers
+  gather_facts: no
+  become: false
+
+  vars:
+    telegram_bot_token: "{{ telegram_bot_token }}"
+    telegram_chat_id: "{{ telegram_chat_id }}"
+
+  tasks:
+
+    - name: Comprobar estado de VMs en Citrix Director
       win_shell: |
         Add-PSSnapin Citrix.*
-        $vm = Get-BrokerMachine -MachineName "{{ item.name }}" -ErrorAction SilentlyContinue
-        if ($vm) {
-          $vm | Select Name, MachineCatalog, DesktopGroupName, RegistrationState | ConvertTo-Json
-        }
-      loop: "{{ restarted_vms }}"
-      loop_control:
-        label: "{{ item.name }}"
-      register: citrix_status
-      delegate_to: "{{ citrix_controller }}"
+        $result = @()
 
-    - name: Construir mensaje de alerta
+        {% for vm in hostvars['localhost'].restarted_vms %}
+        $m = Get-BrokerMachine -MachineName "{{ vm.name }}" -ErrorAction SilentlyContinue
+        if ($m) {
+          $result += [PSCustomObject]@{
+            Name              = $m.Name
+            RegistrationState = $m.RegistrationState
+            MachineCatalog    = $m.MachineCatalog
+            DeliveryGroup     = $m.DesktopGroupName
+          }
+        }
+        {% endfor %}
+
+        $result | ConvertTo-Json
+      register: citrix_status
+
+    - name: Construir mensaje de alerta para Telegram
       set_fact:
         telegram_message: |
-          ⚠️ *ALERTA CITRIX – VMs no registradas* ⚠️
+          ⚠️ ALERTA CITRIX – VMs no registradas ⚠️
 
-          {% for r in citrix_status.results %}
-          {% if r.stdout is defined and r.stdout != "" %}
-          {% set vm = r.stdout | from_json %}
+          {% set vms = citrix_status.stdout | from_json %}
+          {% for vm in vms %}
           {% if vm.RegistrationState != 'Registered' %}
           🖥️ VM: {{ vm.Name }}
           📦 Catálogo: {{ vm.MachineCatalog }}
-          👥 Delivery Group: {{ vm.DesktopGroupName }}
+          👥 Delivery Group: {{ vm.DeliveryGroup }}
           ❌ Estado: {{ vm.RegistrationState }}
-          -------------------------
-          {% endif %}
+          ----------------------------
           {% endif %}
           {% endfor %}
-      when: citrix_status.results | length > 0
+      when: citrix_status.stdout is defined and citrix_status.stdout != ""
 
-    - name: Enviar alerta por Telegram
+    - name: Enviar alerta por Telegram si hay VMs no registradas
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
@@ -102,7 +112,6 @@
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: "{{ telegram_message }}"
-          parse_mode: "Markdown"
         status_code: 200
       when:
         - telegram_message is defined
