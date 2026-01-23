@@ -32,8 +32,14 @@
         $result | ConvertTo-Json -Depth 4
       register: citrix_status
 
-    - name: Filtrar VMs no registradas
+    - name: Separar VMs registradas y no registradas
       set_fact:
+        vms_registradas: >-
+          {{
+            (citrix_status.stdout | from_json)
+            | selectattr('RegistrationState', 'eq', 'Registered')
+            | list
+          }}
         vms_no_registradas: >-
           {{
             (citrix_status.stdout | from_json)
@@ -41,19 +47,26 @@
             | list
           }}
 
-    - name: Preparar mensaje de Telegram
+    - name: Preparar mensaje completo para Telegram
       set_fact:
         telegram_message: >-
-          {%- if vms_no_registradas | length > 0 -%}
-          ⚠️ *VMs NO registradas en Citrix Director:*
-          {%- for vm in vms_no_registradas -%}
-          - {{ vm.Name }} (Estado: {{ vm.RegistrationState }})
-          {%- endfor -%}
-          {%- else -%}
-          ✅ Todas las VMs están registradas correctamente.
-          {%- endif -%}
+          🖥 *Resumen de VMs Citrix Director*
 
-    - name: Enviar notificación por Telegram
+          ✅ *Registradas ({{ vms_registradas | length }}):*
+          {%- for vm in vms_registradas %}
+          - {{ vm.Name }} (Estado: {{ vm.RegistrationState }})
+          {%- endfor %}
+
+          ⚠️ *No registradas ({{ vms_no_registradas | length }}):*
+          {%- if vms_no_registradas | length > 0 %}
+          {%- for vm in vms_no_registradas %}
+          - {{ vm.Name }} (Estado: {{ vm.RegistrationState }})
+          {%- endfor %}
+          {%- else %}
+          Ninguna
+          {%- endif %}
+
+    - name: Enviar resumen por Telegram
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
