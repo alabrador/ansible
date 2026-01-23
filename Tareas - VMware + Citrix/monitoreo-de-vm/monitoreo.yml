@@ -1,68 +1,31 @@
 ---
 ############################################################
-# PLAY 1 - Obtener VMs Citrix desde vCenter
-############################################################
-- name: Obtener VMs Citrix desde vCenter
-  hosts: localhost
-  gather_facts: no
-
-  vars:
-    vcenter_hostname: "vcenter.alter.es"
-    validate_certs: no
-    cluster_name: "CL_CITRIX"
-    vm_prefix: "SRV-CTXP"
-    vm_start: 101
-    vm_end: 145
-
-  tasks:
-
-    - name: Obtener TODAS las VMs del vCenter
-      community.vmware.vmware_vm_info:
-        hostname: "{{ vcenter_hostname }}"
-        username: "{{ vcenter_user }}"
-        password: "{{ vcenter_password }}"
-        validate_certs: "{{ validate_certs }}"
-        show_cluster: true
-      register: vms_info
-
-    - name: Filtrar VMs del cluster CL_CITRIX y rango de nombre
-      set_fact:
-        citrix_vms: >-
-          {{
-            vms_info.virtual_machines
-            | selectattr('cluster', 'defined')
-            | selectattr('cluster', 'equalto', cluster_name)
-            | selectattr('name', 'match', '^SRV-CTXP(1[0-4][0-9]|101)$')
-            | list
-          }}
-
-    - name: Mostrar VMs detectadas
-      debug:
-        msg: "VM {{ item.name }} en cluster {{ item.cluster }}"
-      loop: "{{ citrix_vms }}"
-      loop_control:
-        label: "{{ item.name }}"
-
-############################################################
-# PLAY 2 - Verificar registro en Citrix Director
+# PLAY ÚNICO - Verificar registro en Citrix Director
 ############################################################
 - name: Verificar registro de VMs en Citrix Director
   hosts: citrix_controllers
   gather_facts: no
   become: false
 
+  vars:
+    vm_prefix: "SRV-CTXP"
+    vm_start: 101
+    vm_end: 145
+
   tasks:
 
-    - name: Comprobar estado de registro en Citrix Director (optimizado)
+    - name: Comprobar estado de registro en Citrix Director
       win_shell: |
         Add-PSSnapin Citrix.*
 
-        $vm_names = @( 
+        # Generar la lista de nombres de VM
+        $vm_names = @(
           {% for i in range(vm_start, vm_end + 1) %}
           "{{ vm_prefix }}{{ '%03d' % i }}"{% if not loop.last %}, {% endif %}
           {% endfor %}
         )
 
+        # Obtener estado de registro de todas las VMs
         $result = Get-BrokerMachine -MachineName $vm_names -ErrorAction SilentlyContinue | 
                   Select-Object Name, RegistrationState, MachineCatalog, DesktopGroupName
 
