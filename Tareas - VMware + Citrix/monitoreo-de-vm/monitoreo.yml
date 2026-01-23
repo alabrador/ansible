@@ -3,7 +3,7 @@
 # PLAY ÚNICO - Verificar registro en Citrix Director
 ############################################################
 - name: Verificar registro de VMs en Citrix Director
-  hosts: citrix_controllers
+  hosts: srv-ctxp101
   gather_facts: no
   become: false
 
