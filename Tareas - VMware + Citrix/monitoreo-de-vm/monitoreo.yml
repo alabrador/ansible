@@ -1,81 +1,100 @@
 ---
-- name: Monitorear VMs de Citrix y registrar en Director
+- name: Monitorizar VMs Citrix del cluster CL_CITRIX y validar registro en Director
   hosts: localhost
   gather_facts: no
 
   vars:
-    # Datos de vCenter
-    vcenter_hostname: "vcenter.tudominio.local"
-    vcenter_user: "{{ vcenter_user }}"       # Definido como variable AWX
-    vcenter_password: "{{ vcenter_password }}" # Definido como variable AWX
-    datacenter_name: "Datacenter-Citrix"
-    vm_folder: "CitrixVMs"
+    # vCenter
+    vcenter_hostname: "vcenter.alter.es"
+    vcenter_user: "{{ vcenter_user }}"
+    vcenter_password: "{{ vcenter_password }}"
+    validate_certs: no
 
-    # Datos Citrix Director (delegación de PowerShell)
-    citrix_controller: "{{ citrix_controller }}"  # Variable AWX
-    citrix_user: "{{ citrix_user }}"              # Variable AWX
-    citrix_password: "{{ citrix_password }}"      # Variable AWX
+    datacenter_name: "MATEO INURRIA"
+    cluster_name: "CL_CITRIX"
 
-    # Telegram (variables definidas en AWX)
+    # Citrix
+    citrix_controller: "{{ citrix_controller }}"
+    citrix_user: "{{ citrix_user }}"
+    citrix_password: "{{ citrix_password }}"
+
+    # Telegram
     telegram_bot_token: "{{ telegram_bot_token }}"
     telegram_chat_id: "{{ telegram_chat_id }}"
 
-    # Tiempo límite de reinicio (en minutos)
+    # Ventana de reinicio
     last_boot_minutes: 10
 
   tasks:
 
-    - name: Obtener todas las VMs en vCenter
+    - name: Obtener VMs del cluster CL_CITRIX
       community.vmware.vmware_vm_info:
         hostname: "{{ vcenter_hostname }}"
         username: "{{ vcenter_user }}"
         password: "{{ vcenter_password }}"
-        validate_certs: no
-        folder: "{{ vm_folder }}"
+        validate_certs: "{{ validate_certs }}"
+        datacenter: "{{ datacenter_name }}"
+        cluster: "{{ cluster_name }}"
       register: vms_info
 
-    - name: Filtrar VMs reiniciadas en los últimos {{ last_boot_minutes }} minutos
+    - name: Filtrar VMs encendidas reiniciadas recientemente
       set_fact:
         restarted_vms: >-
           {{
             vms_info.virtual_machines
-            | selectattr('runtime.bootTime', 'defined')
             | selectattr('runtime.powerState', 'equalto', 'poweredOn')
-            | selectattr('runtime.bootTime', '>=', (ansible_date_time.iso8601 | to_datetime('%Y-%m-%dT%H:%M:%SZ') - timedelta(minutes=last_boot_minutes)))
+            | selectattr('runtime.bootTime', 'defined')
+            | selectattr(
+                'runtime.bootTime',
+                '>=',
+                (ansible_date_time.iso8601
+                 | to_datetime('%Y-%m-%dT%H:%M:%SZ')
+                 - timedelta(minutes=last_boot_minutes))
+              )
             | list
           }}
 
     - name: Mostrar VMs reiniciadas
       debug:
-        var: restarted_vms
+        msg: >
+          VM {{ item.name }} reiniciada en {{ item.runtime.bootTime }}
+      loop: "{{ restarted_vms }}"
+      loop_control:
+        label: "{{ item.name }}"
 
-    - name: Verificar registro de cada VM en Citrix Director
+    - name: Verificar estado en Citrix Director
       win_shell: |
         Add-PSSnapin Citrix.*
-        Get-BrokerMachine -MachineName "{{ item.name }}" | Select-Object Name, MachineCatalog, DeliveryGroup, RegistrationState | ConvertTo-Json
+        $vm = Get-BrokerMachine -MachineName "{{ item.name }}" -ErrorAction SilentlyContinue
+        if ($vm) {
+          $vm | Select Name, MachineCatalog, DesktopGroupName, RegistrationState | ConvertTo-Json
+        }
       loop: "{{ restarted_vms }}"
       loop_control:
         label: "{{ item.name }}"
       register: citrix_status
       delegate_to: "{{ citrix_controller }}"
 
-    - name: Construir mensaje de estado
+    - name: Construir mensaje de alerta
       set_fact:
         telegram_message: |
-          ⚠️ ALERTA - VMs no registradas en Citrix Director ⚠️
-          {% for vm in citrix_status.results %}
-            {% set vm_info = vm.stdout | from_json %}
-            {% if vm_info.RegistrationState != 'Registered' %}
-              VM: {{ vm_info.Name }}
-              Catalog: {{ vm_info.MachineCatalog }}
-              DeliveryGroup: {{ vm_info.DeliveryGroup }}
-              Estado: {{ vm_info.RegistrationState }}
-              ------------------------------
-            {% endif %}
-          {% endfor %}
-      when: citrix_status.results | selectattr('stdout', 'defined') | list | length > 0
+          ⚠️ *ALERTA CITRIX – VMs no registradas* ⚠️
 
-    - name: Enviar notificación por Telegram si hay VMs no registradas
+          {% for r in citrix_status.results %}
+          {% if r.stdout is defined and r.stdout != "" %}
+          {% set vm = r.stdout | from_json %}
+          {% if vm.RegistrationState != 'Registered' %}
+          🖥️ VM: {{ vm.Name }}
+          📦 Catálogo: {{ vm.MachineCatalog }}
+          👥 Delivery Group: {{ vm.DesktopGroupName }}
+          ❌ Estado: {{ vm.RegistrationState }}
+          -------------------------
+          {% endif %}
+          {% endif %}
+          {% endfor %}
+      when: citrix_status.results | length > 0
+
+    - name: Enviar alerta por Telegram
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
@@ -83,6 +102,8 @@
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: "{{ telegram_message }}"
+          parse_mode: "Markdown"
         status_code: 200
-      delegate_to: localhost
-      when: telegram_message is defined and telegram_message != ''
+      when:
+        - telegram_message is defined
+        - "'VM:' in telegram_message"
