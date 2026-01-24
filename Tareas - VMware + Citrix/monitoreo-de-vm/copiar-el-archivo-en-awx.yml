@@ -4,7 +4,7 @@
   gather_facts: no
 
   vars:
-    report_host: srv-ansible
+    report_host: 192.168.71.235
     remote_base_path: /opt/almacen-de-reporte/data
 
   tasks:
