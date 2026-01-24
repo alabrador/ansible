@@ -5,13 +5,13 @@
   become: false
 
   vars:
-    # Fecha/hora estándar (Linux AWX)
+    # Fecha/hora segura para Linux/AWX
     current_time: "{{ '%Y-%m-%d %H:%M' | strftime }}"
 
   tasks:
 
     # ============================
-    # Bloque 1: Consultar Windows
+    # BLOQUE 1: Windows - Consultar máquinas
     # ============================
     - name: Obtener máquinas sin registrar en Citrix Studio
       win_shell: |
@@ -35,7 +35,7 @@
         msg: "{{ unregistered_machines.stdout }}"
 
     # ============================
-    # Bloque 2: Enviar Telegram
+    # BLOQUE 2: Linux/AWX - Enviar Telegram
     # ============================
 
     - name: Enviar alerta Telegram si hay máquinas sin registrar
