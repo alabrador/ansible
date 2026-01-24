@@ -19,7 +19,7 @@
         archivo_base64: "{{ archivo_b64.stdout }}"
 
 - name: Crear archivo en servidor Linux
-  hosts: 192.168.71.235
+  hosts: srv-ansible
   become: true
   gather_facts: no
 
