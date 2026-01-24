@@ -2,15 +2,18 @@
 - name: Traer archivos de máquinas no registradas a servidor Linux intermedio
   hosts: srv-ddc01
   gather_facts: no
-  become: false
-
-  vars:
-    remote_base_path: "/opt/almacen-de-reporte/data"
 
   tasks:
-    - name: Copiar archivo de Windows a servidor intermedio
-      delegate_to: "{{ report_host:report_port }}"
+    - name: Asegurar directorio destino en servidor intermedio
+      file:
+        path: "{{ remote_base_path }}"
+        state: directory
+        mode: '0755'
+      delegate_to: "{{ report_host }}"
+
+    - name: Copiar archivo desde Windows al servidor intermedio
       fetch:
-        src: C:\Temp\unregistered_machines.txt
+        src: C:/Temp/unregistered_machines.txt
         dest: "{{ remote_base_path }}/unregistered_machines_{{ inventory_hostname }}.txt"
         flat: yes
+      delegate_to: "{{ report_host }}"
