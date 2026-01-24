@@ -13,3 +13,4 @@
         src: C:\Temp\unregistered_machines.txt
         dest: "{{ contenedor_path }}"
         flat: yes
+        become: yes
