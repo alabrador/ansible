@@ -67,8 +67,13 @@
           {{ delivery_groups_summary.stdout }}
           
           Fecha: {{ ansible_date_time.iso8601 }}
-      delegate_to: localhost
 
+- name: Enviar notificacion desde AWX
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  
+  tasks:
     - name: Enviar resumen por Telegram
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
@@ -76,6 +81,4 @@
         body_format: form-urlencoded
         body:
           chat_id: "{{ telegram_chat_id }}"
-          text: "{{ telegram_message }}"
-      delegate_to: localhost
-      become: false
+          text: "{{ hostvars['srv-ddc01'].telegram_message }}"
