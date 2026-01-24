@@ -9,7 +9,7 @@
 
   tasks:
     - name: Copiar archivo de Windows a servidor intermedio
-      delegate_to: "{{ report_host }}"
+      delegate_to: "{{ report_host:report_port }}"
       fetch:
         src: C:\Temp\unregistered_machines.txt
         dest: "{{ remote_base_path }}/unregistered_machines_{{ inventory_hostname }}.txt"
