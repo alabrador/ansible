@@ -5,7 +5,6 @@
   become: false
 
   tasks:
-
     - name: Consultar todas las maquinas sin registrar en Citrix Studio
       win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
@@ -13,6 +12,7 @@
         if ($unregistered) {
           Write-Output "=== MAQUINAS SIN REGISTRAR ==="
           Write-Output "Total: $($unregistered.Count)"
+          Write-Output ""
           foreach ($machine in $unregistered) {
             Write-Output "Nombre: $($machine.MachineName)"
             Write-Output "Catalogo: $($machine.CatalogName)"
@@ -20,51 +20,52 @@
             Write-Output "Estado Energia: $($machine.PowerState)"
             Write-Output "IP: $($machine.IPAddress)"
             Write-Output "Sesiones: $($machine.SessionCount)"
-            Write-Output "-----------------------------"
+            Write-Output "----------------------------------------"
           }
         } else {
           Write-Output "=== MAQUINAS SIN REGISTRAR ==="
           Write-Output "Total: 0"
-          Write-Output "Todo OK"
+          Write-Output "No hay maquinas sin registrar - Todo OK"
         }
       register: unregistered_machines
 
-    - name: Consultar resumen general de Delivery Groups
+    - name: Consultar resumen general de todos los Delivery Groups
       win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
-        $allDG = Get-BrokerDesktopGroup
+        $allDG = Get-BrokerDesktopGroup -ErrorAction SilentlyContinue
         Write-Output "=== RESUMEN DELIVERY GROUPS ==="
         foreach ($dg in $allDG) {
           $unregCount = $dg.TotalMachines - $dg.MachinesRegistered
           Write-Output "Grupo: $($dg.Name)"
-          Write-Output "  Total: $($dg.TotalMachines)"
+          Write-Output "  Total Maquinas: $($dg.TotalMachines)"
           Write-Output "  Registradas: $($dg.MachinesRegistered)"
           Write-Output "  Sin Registrar: $unregCount"
-          Write-Output "  Sesiones: $($dg.Sessions)"
+          Write-Output "  Sesiones Activas: $($dg.Sessions)"
           Write-Output "---"
         }
       register: delivery_groups_summary
       ignore_errors: yes
 
-    - name: Consultar total de maquinas registradas
+    - name: Consultar todas las maquinas registradas
       win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
-        $registered = Get-BrokerMachine -RegistrationState Registered
+        $registered = Get-BrokerMachine -RegistrationState Registered -ErrorAction SilentlyContinue
         Write-Output "=== MAQUINAS REGISTRADAS ==="
         Write-Output "Total: $($registered.Count)"
       register: registered_count
       ignore_errors: yes
 
     - name: Enviar resumen por Telegram
+      delegate_to: localhost
+      connection: local
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
-        body_format: json
+        body_format: form-urlencoded
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: |
-            📊 REPORTE CITRIX STUDIO
-
+            === REPORTE CITRIX STUDIO ===
             Servidor: {{ inventory_hostname }}
             Fecha: {{ ansible_date_time.iso8601 }}
 
@@ -73,6 +74,3 @@
             {{ unregistered_machines.stdout }}
 
             {{ delivery_groups_summary.stdout }}
-        status_code: 200
-      delegate_to: localhost
-      run_once: true
