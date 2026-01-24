@@ -1,15 +1,22 @@
 ---
-- name: Enviar reporte de Citrix por Telegram
-  hosts: srv-ddc01
+- name: Enviar reporte Citrix a Telegram
+  hosts: localhost
   gather_facts: no
+  vars:
+    telegram_bot_token: "{{ telegram_bot_token }}"
+    telegram_chat_id: "{{ telegram_chat_id }}"
   tasks:
 
-    - name: Leer archivo de maquinas no registradas
-      win_shell: type C:\Temp\unregistered_machines.txt
-      register: unregistered_machines
-      changed_when: false
+    - name: Leer contenido del archivo
+      slurp:
+        src: /tmp/unregistered_machines_srv-ddc01.txt
+      register: file_content
 
-    - name: Enviar alerta por Telegram si hay maquinas sin registrar
+    - name: Decodificar contenido del archivo
+      set_fact:
+        unregistered_machines: "{{ file_content.content | b64decode }}"
+
+    - name: Enviar alerta por Telegram
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
@@ -17,10 +24,9 @@
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: |
-            {% if unregistered_machines.stdout != '' %}
-            ⚠️ Citrix - Máquinas NO registradas
-            {{ unregistered_machines.stdout }}
-            {% else %}
+            {% if 'Todas las máquinas están registradas' in unregistered_machines %}
             ✅ Citrix OK - Todas las máquinas están registradas
+            {% else %}
+            ⚠️ Citrix - Máquinas NO registradas
+            {{ unregistered_machines }}
             {% endif %}
-      delegate_to: localhost

@@ -1,0 +1,11 @@
+---
+- name: Traer archivo de Windows al host de control (AWX)
+  hosts: srv-ddc01
+  gather_facts: no
+  tasks:
+
+    - name: Copiar archivo al host de control
+      fetch:
+        src: C:\Temp\unregistered_machines.txt
+        dest: /tmp/unregistered_machines_srv-ddc01.txt
+        flat: yes
