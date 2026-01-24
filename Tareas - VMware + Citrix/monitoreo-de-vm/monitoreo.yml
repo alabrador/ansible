@@ -5,8 +5,8 @@
   become: false
 
   vars:
-    # Fecha/hora formateada correctamente para Linux/AWX
-    current_time: "{{ lookup('pipe', 'date +\\%Y-\\%m-\\%d \\%H:\\%M') }}"
+    # Fecha/hora estándar y segura para AWX
+    current_time: "{{ '%Y-%m-%d %H:%M' | strftime }}"
 
   tasks:
     - name: Obtener máquinas sin registrar en Citrix Studio
