@@ -1,17 +1,12 @@
 ---
-- name: Traer archivo de máquinas no registradas
+- name: Traer archivo de Windows al contenedor AWX
   hosts: srv-ddc01
   gather_facts: no
-  become: false
-
-  vars:
-    windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"
-    local_tmp_file: "/tmp/unregistered_machines.txt"
-
   tasks:
     - name: Traer archivo desde Windows
-      fetch:
-        src: "{{ windows_tmp_file }}"
-        dest: "{{ local_tmp_file }}"
-        flat: yes
-      delegate_to: "{{ inventory_hostname }}"
+      win_copy:
+        src: C:\Temp\unregistered_machines.txt
+        dest: /tmp/unregistered_machines_srv-ddc01.txt
+        remote_src: yes
+      delegate_to: localhost
+
