@@ -4,7 +4,7 @@
   gather_facts: no
 
   vars:
-    # Ruta local donde se copió el archivo desde Windows
+    # Ruta local del archivo traído desde Windows
     local_tmp_file: "/tmp/unregistered_machines.txt"
     current_time: "{{ '%Y-%m-%d %H:%M' | strftime }}"
 
@@ -14,9 +14,11 @@
         path: "{{ local_tmp_file }}"
       register: file_check
 
-    - name: Leer contenido del archivo si existe
-      set_fact:
-        machines_text: "{{ lookup('file', local_tmp_file) | trim }}"
+    - name: Leer contenido del archivo
+      command: cat "{{ local_tmp_file }}"
+      register: machines_text
+      changed_when: false
+      failed_when: false
       when: file_check.stat.exists
 
     - name: Enviar alerta si hay máquinas sin registrar
@@ -31,11 +33,11 @@
             Servidor: srv-ddc01
             Fecha: {{ current_time }}
 
-            {{ machines_text }}
+            {{ machines_text.stdout }}
         status_code: 200
       when:
         - file_check.stat.exists
-        - machines_text != "ALL_REGISTERED"
+        - machines_text.stdout | length > 0
 
     - name: Enviar OK si todas están registradas
       uri:
@@ -52,7 +54,7 @@
         status_code: 200
       when:
         - file_check.stat.exists
-        - machines_text == "ALL_REGISTERED"
+        - machines_text.stdout | length == 0
 
     - name: Mostrar mensaje si el archivo no existe
       debug:
