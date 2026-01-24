@@ -5,14 +5,10 @@
   become: false
 
   vars:
-    # Fecha/hora segura para Linux/AWX
     current_time: "{{ '%Y-%m-%d %H:%M' | strftime }}"
 
   tasks:
 
-    # ============================
-    # BLOQUE 1: Windows - Consultar máquinas
-    # ============================
     - name: Obtener máquinas sin registrar en Citrix Studio
       win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
@@ -21,7 +17,9 @@
         if ($unregistered) {
           $lines = @()
           foreach ($machine in $unregistered) {
-            $lines += "🖥 Name: $($machine.MachineName) | State: $($machine.RegistrationState) | Power: $($machine.PowerState) | IP: $($machine.IPAddress)"
+            # Si IP es nulo, mostrar "-"
+            $ip = if ($machine.IPAddress) { $machine.IPAddress } else { "-" }
+            $lines += "🖥 Name: $($machine.MachineName) | State: $($machine.RegistrationState) | Power: $($machine.PowerState) | IP: $ip"
           }
           $lines -join "`n"
         } else {
@@ -30,13 +28,9 @@
       register: unregistered_machines
       changed_when: false
 
-    - name: Mostrar resultado en consola
+    - name: Mostrar resultado en consola (limpio)
       debug:
-        msg: "{{ unregistered_machines.stdout }}"
-
-    # ============================
-    # BLOQUE 2: Linux/AWX - Enviar Telegram
-    # ============================
+        msg: "{{ unregistered_machines.stdout | replace('\r','') | trim }}"
 
     - name: Enviar alerta Telegram si hay máquinas sin registrar
       uri:
@@ -50,10 +44,10 @@
             Servidor: {{ inventory_hostname }}
             Fecha: {{ current_time }}
 
-            {{ unregistered_machines.stdout }}
+            {{ unregistered_machines.stdout | replace('\r','') | trim }}
         status_code: 200
       delegate_to: localhost
-      when: unregistered_machines.stdout | trim | length > 0
+      when: unregistered_machines.stdout | replace('\r','') | trim | length > 0
 
     - name: Enviar OK Telegram si todas están registradas
       uri:
@@ -69,4 +63,4 @@
             Fecha: {{ current_time }}
         status_code: 200
       delegate_to: localhost
-      when: unregistered_machines.stdout | trim | length == 0
+      when: unregistered_machines.stdout | replace('\r','') | trim | length == 0
