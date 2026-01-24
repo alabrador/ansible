@@ -1,16 +1,16 @@
 ---
-- name: Traer archivo desde Windows al contenedor de reportes
+- name: Traer archivos de máquinas no registradas a servidor Linux intermedio
   hosts: srv-ddc01
   gather_facts: no
   become: false
 
   vars:
-    contenedor_path: "/opt/almacen-de-reporte/data/unregistered_machines_{{ inventory_hostname }}.txt"
+    remote_base_path: "/opt/almacen-de-reporte/data"
 
   tasks:
-    - name: Copiar archivo de Windows al host de AWX
+    - name: Copiar archivo de Windows a servidor intermedio
+      delegate_to: "{{ report_host }}"
       fetch:
         src: C:\Temp\unregistered_machines.txt
-        dest: "{{ contenedor_path }}"
+        dest: "{{ remote_base_path }}/unregistered_machines_{{ inventory_hostname }}.txt"
         flat: yes
-        become: yes
