@@ -2,10 +2,11 @@
 - name: Verificar maquinas sin registrar en Citrix
   hosts: srv-ddc01
   gather_facts: yes
+  become: false
   
   tasks:
     - name: Consultar todas las maquinas sin registrar en Citrix Studio
-      ansible.windows.win_shell: |
+      win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
         $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
         if ($unregistered) {
@@ -29,7 +30,7 @@
       register: unregistered_machines
 
     - name: Consultar resumen general de todos los Delivery Groups
-      ansible.windows.win_shell: |
+      win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
         $allDG = Get-BrokerDesktopGroup -ErrorAction SilentlyContinue
         Write-Output "=== RESUMEN DELIVERY GROUPS ==="
@@ -46,7 +47,7 @@
       ignore_errors: yes
 
     - name: Consultar todas las maquinas registradas
-      ansible.windows.win_shell: |
+      win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
         $registered = Get-BrokerMachine -RegistrationState Registered -ErrorAction SilentlyContinue
         Write-Output "=== MAQUINAS REGISTRADAS ==="
@@ -54,26 +55,6 @@
       register: registered_count
       ignore_errors: yes
 
-    - name: Preparar mensaje de Telegram
-      set_fact:
-        telegram_message: |
-          === REPORTE CITRIX STUDIO ===
-          Servidor: srv-ddc01
-          
-          {{ registered_count.stdout }}
-          
-          {{ unregistered_machines.stdout }}
-          
-          {{ delivery_groups_summary.stdout }}
-          
-          Fecha: {{ ansible_date_time.iso8601 }}
-
-- name: Enviar notificacion desde AWX
-  hosts: localhost
-  connection: local
-  gather_facts: no
-  
-  tasks:
     - name: Enviar resumen por Telegram
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
@@ -81,4 +62,15 @@
         body_format: form-urlencoded
         body:
           chat_id: "{{ telegram_chat_id }}"
-          text: "{{ hostvars['srv-ddc01'].telegram_message }}"
+          text: |
+            === REPORTE CITRIX STUDIO ===
+            Servidor: {{ inventory_hostname }}
+            Fecha: {{ ansible_date_time.iso8601 }}
+
+            {{ registered_count.stdout }}
+
+            {{ unregistered_machines.stdout }}
+
+            {{ delivery_groups_summary.stdout }}
+      delegate_to: localhost
+      become: false
