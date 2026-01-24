@@ -4,13 +4,20 @@
   gather_facts: no
 
   vars:
-    local_tmp_file: "/tmp/unregistered_machines_srv-ddc01.txt"
+    # Ruta local donde se copió el archivo desde Windows
+    local_tmp_file: "/tmp/unregistered_machines.txt"
     current_time: "{{ '%Y-%m-%d %H:%M' | strftime }}"
 
   tasks:
-    - name: Leer contenido del archivo
+    - name: Verificar que el archivo existe
+      stat:
+        path: "{{ local_tmp_file }}"
+      register: file_check
+
+    - name: Leer contenido del archivo si existe
       set_fact:
         machines_text: "{{ lookup('file', local_tmp_file) | trim }}"
+      when: file_check.stat.exists
 
     - name: Enviar alerta si hay máquinas sin registrar
       uri:
@@ -26,7 +33,9 @@
 
             {{ machines_text }}
         status_code: 200
-      when: machines_text != "ALL_REGISTERED"
+      when:
+        - file_check.stat.exists
+        - machines_text != "ALL_REGISTERED"
 
     - name: Enviar OK si todas están registradas
       uri:
@@ -41,4 +50,11 @@
             Servidor: srv-ddc01
             Fecha: {{ current_time }}
         status_code: 200
-      when: machines_text == "ALL_REGISTERED"
+      when:
+        - file_check.stat.exists
+        - machines_text == "ALL_REGISTERED"
+
+    - name: Mostrar mensaje si el archivo no existe
+      debug:
+        msg: "Archivo de máquinas no registradas no encontrado. Ejecuta primero la plantilla de fetch."
+      when: not file_check.stat.exists

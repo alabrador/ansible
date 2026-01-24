@@ -6,7 +6,7 @@
 
   vars:
     windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"
-    local_tmp_file: "/tmp/unregistered_machines_srv-ddc01.txt"
+    local_tmp_file: "/tmp/unregistered_machines.txt"
 
   tasks:
     - name: Traer archivo desde Windows
