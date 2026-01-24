@@ -18,12 +18,14 @@
       set_fact:
         archivo_base64: "{{ archivo_b64.stdout }}"
 
-- name: Crear archivo en servidor Linux
-  hosts: srv-ansible
-  become: true
+- name: Crear archivo en servidor Linux (srv-ansible)
+  hosts: 192.168.71.235
   gather_facts: no
+  become: true
 
   vars:
+    ansible_connection: ssh
+    ansible_user: root          # ajusta si usas otro usuario
     archivo_destino: /opt/almacen-de-reporte/unregistered_machines.txt
 
   tasks:
