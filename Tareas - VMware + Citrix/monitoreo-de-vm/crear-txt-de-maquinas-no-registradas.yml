@@ -1,0 +1,32 @@
+---
+- name: Generar archivo de máquinas Citrix sin registrar
+  hosts: srv-ddc01
+  gather_facts: no
+  become: false
+
+  vars:
+    windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"
+
+  tasks:
+    - name: Obtener máquinas sin registrar
+      win_shell: |
+        Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
+        $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
+
+        if ($unregistered) {
+          $lines = @()
+          foreach ($m in $unregistered) {
+            $ip = if ($m.IPAddress) { $m.IPAddress } else { "-" }
+            $lines += "🖥 Name: $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState) | IP: $ip"
+          }
+          $lines -join "`n"
+        } else {
+          "ALL_REGISTERED"
+        }
+      register: unregistered_machines
+      changed_when: false
+
+    - name: Guardar contenido en archivo temporal en Windows
+      win_copy:
+        content: "{{ unregistered_machines.stdout | default('ALL_REGISTERED') }}"
+        dest: "{{ windows_tmp_file }}"
