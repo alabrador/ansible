@@ -1,31 +1,62 @@
 ---
-- name: Mostrar maquinas sin registrar en Citrix
+- name: Verificar máquinas Citrix y notificar con fecha/hora
   hosts: srv-ddc01
   gather_facts: no
   become: false
 
+  vars:
+    # Fecha/hora en formato YYYY-MM-DD HH:MM
+    current_time: "{{ lookup('pipe', 'date +%Y-%m-%d %H:%M') }}"
+
   tasks:
-    - name: Obtener maquinas sin registrar en Citrix Studio
+    - name: Obtener máquinas sin registrar en Citrix Studio
       win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
         $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
 
         if ($unregistered) {
           foreach ($machine in $unregistered) {
-            Write-Output "Nombre: $($machine.MachineName)"
-            Write-Output "Registration State: $($machine.RegistrationState)"
-            Write-Output "Catalogo: $($machine.CatalogName)"
-            Write-Output "Delivery Group: $($machine.DesktopGroupName)"
-            Write-Output "Estado Energia: $($machine.PowerState)"
-            Write-Output "IP: $($machine.IPAddress)"
-            Write-Output "Sesiones: $($machine.SessionCount)"
-            Write-Output "----------------------------------------"
+            Write-Output "🖥 $($machine.MachineName) | RegistrationState: $($machine.RegistrationState) | Power: $($machine.PowerState) | IP: $($machine.IPAddress)"
           }
         } else {
-          Write-Output "No hay maquinas sin registrar - Todo OK"
+          Write-Output ""
         }
       register: unregistered_machines
+      changed_when: false
 
     - name: Mostrar resultado en consola
       debug:
         msg: "{{ unregistered_machines.stdout }}"
+
+    - name: Enviar alerta Telegram si hay máquinas sin registrar
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            ⚠️ Citrix - Máquinas NO registradas
+            Servidor: {{ inventory_hostname }}
+            Fecha: {{ current_time }}
+
+            {{ unregistered_machines.stdout }}
+        status_code: 200
+      delegate_to: localhost
+      when: unregistered_machines.stdout is defined and unregistered_machines.stdout | trim | length > 0
+
+    - name: Enviar OK Telegram si todas están registradas
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            ✅ Citrix OK
+            Todas las máquinas están registradas correctamente.
+            Servidor: {{ inventory_hostname }}
+            Fecha: {{ current_time }}
+        status_code: 200
+      delegate_to: localhost
+      when: unregistered_machines.stdout is not defined or unregistered_machines.stdout | trim | length == 0
