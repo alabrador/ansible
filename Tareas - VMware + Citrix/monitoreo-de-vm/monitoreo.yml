@@ -1,12 +1,12 @@
 ---
-- name: Verificar máquinas Citrix y notificar con fecha/hora
+- name: Verificar máquinas Citrix y notificar con Telegram
   hosts: srv-ddc01
   gather_facts: no
   become: false
 
   vars:
-    # Fecha/hora en formato YYYY-MM-DD HH:MM
-    current_time: "{{ lookup('pipe', 'date +%Y-%m-%d %H:%M') }}"
+    # Fecha/hora formateada correctamente para Linux/AWX
+    current_time: "{{ lookup('pipe', 'date +\\%Y-\\%m-\\%d \\%H:\\%M') }}"
 
   tasks:
     - name: Obtener máquinas sin registrar en Citrix Studio
