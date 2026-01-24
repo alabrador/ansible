@@ -5,8 +5,8 @@
   become: false
 
   vars:
-    windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"  # Ruta que ya funciona en Windows
-    local_tmp_file: "/tmp/unregistered_machines_{{ inventory_hostname }}.txt"
+    windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"  # Ruta real en Windows
+    local_tmp_file: "/tmp/unregistered_machines.txt"          # Mismo nombre para Linux/AWX
     current_time: "{{ '%Y-%m-%d %H:%M' | strftime }}"
 
   tasks:
