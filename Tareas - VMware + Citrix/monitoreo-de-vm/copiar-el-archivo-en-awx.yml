@@ -1,26 +1,37 @@
 ---
-- name: Leer archivo en Windows y enviarlo a Linux
+- name: Leer archivo en Windows
   hosts: srv-ddc01
   gather_facts: no
 
   vars:
     archivo_origen: C:\Temp\unregistered_machines.txt
-    archivo_destino: /opt/almacen-de-reporte/unregistered_machines.txt
 
   tasks:
-
-    - name: Leer archivo desde Windows y codificarlo en Base64
+    - name: Leer archivo y codificarlo en Base64
       win_shell: |
         [Convert]::ToBase64String(
           [System.IO.File]::ReadAllBytes("{{ archivo_origen }}")
         )
       register: archivo_b64
 
-    - name: Copiar archivo al servidor Linux
-      delegate_to: srv-ansible
-      become: true
+    - name: Guardar Base64 en localhost
+      delegate_to: localhost
       copy:
-        content: "{{ archivo_b64.stdout | b64decode }}"
+        content: "{{ archivo_b64.stdout }}"
+        dest: /tmp/unregistered_machines.b64
+
+- name: Reconstruir archivo en Linux
+  hosts: srv-ansible
+  become: true
+  gather_facts: no
+
+  vars:
+    archivo_destino: /opt/almacen-de-reporte/unregistered_machines.txt
+
+  tasks:
+    - name: Decodificar y crear archivo final
+      copy:
+        content: "{{ lookup('file', '/tmp/unregistered_machines.b64') | b64decode }}"
         dest: "{{ archivo_destino }}"
         owner: root
         group: root
