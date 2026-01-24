@@ -11,7 +11,7 @@
   tasks:
 
     # ============================
-    # BLOQUE 1: Windows - Guardar resultado en archivo
+    # BLOQUE 1: Windows - Obtener y guardar resultado
     # ============================
     - block:
         - name: Obtener máquinas sin registrar en Citrix Studio
@@ -38,18 +38,18 @@
             dest: "{{ tmp_file }}"
 
     # ============================
-    # BLOQUE 2: Linux/AWX - Leer archivo desde Windows
+    # BLOQUE 2: AWX/Linux - Leer archivo y enviar Telegram
     # ============================
     - block:
         - name: Traer archivo temporal a AWX/Linux
           fetch:
-            src: "{{ tmp_file }}"
-            dest: "/tmp/unregistered_machines_{{ inventory_hostname }}.txt"
-            flat: yes
+            src: "{{ tmp_file }}"          # archivo en Windows
+            dest: "/tmp/"                  # carpeta destino en Linux/AWX
+            flat: yes                      # evita subcarpetas extra
 
         - name: Leer contenido del archivo
           slurp:
-            src: "/tmp/unregistered_machines_{{ inventory_hostname }}.txt"
+            src: "/tmp/unregistered_machines.txt"
           register: machines_content
 
         - name: Decodificar contenido
