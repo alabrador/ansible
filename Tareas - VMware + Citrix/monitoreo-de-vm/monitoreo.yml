@@ -13,6 +13,7 @@
         if ($unregistered) {
           foreach ($machine in $unregistered) {
             Write-Output "Nombre: $($machine.MachineName)"
+            Write-Output "Registration State: $($machine.RegistrationState)"
             Write-Output "Catalogo: $($machine.CatalogName)"
             Write-Output "Delivery Group: $($machine.DesktopGroupName)"
             Write-Output "Estado Energia: $($machine.PowerState)"
