@@ -26,9 +26,8 @@
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: |
-            ⚠️ *Citrix - Máquinas NO registradas*
+            ⚠️ Citrix - Máquinas NO registradas
             Servidor: {{ inventory_hostname }}
-            Fecha: {{ ansible_date_time.iso8601 }}
 
             {{ unregistered.stdout }}
         status_code: 200
@@ -43,10 +42,9 @@
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: |
-            ✅ *Maquinas Citrix OK*
+            ✅ Citrix OK
             Todas las máquinas están registradas correctamente.
             Servidor: {{ inventory_hostname }}
-            Fecha: {{ ansible_date_time.iso8601 }}
         status_code: 200
       delegate_to: localhost
       when: unregistered.stdout | length == 0
