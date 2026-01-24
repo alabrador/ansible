@@ -14,13 +14,22 @@
         )
       register: archivo_b64
 
-    - name: Guardar Base64 en localhost
-      delegate_to: localhost
+    - name: Guardar Base64 como fact
+      set_fact:
+        archivo_base64: "{{ archivo_b64.stdout }}"
+
+- name: Guardar archivo en controller (localhost)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: Escribir archivo Base64 en disco
       copy:
-        content: "{{ archivo_b64.stdout }}"
+        content: "{{ hostvars['srv-ddc01'].archivo_base64 }}"
         dest: /tmp/unregistered_machines.b64
 
-- name: Reconstruir archivo en Linux
+- name: Crear archivo final en srv-ansible
   hosts: srv-ansible
   become: true
   gather_facts: no
@@ -29,7 +38,7 @@
     archivo_destino: /opt/almacen-de-reporte/unregistered_machines.txt
 
   tasks:
-    - name: Decodificar y crear archivo final
+    - name: Decodificar y crear archivo
       copy:
         content: "{{ lookup('file', '/tmp/unregistered_machines.b64') | b64decode }}"
         dest: "{{ archivo_destino }}"
