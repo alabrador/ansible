@@ -3,6 +3,10 @@
   hosts: srv-ddc01
   gather_facts: no
 
+  vars:
+    remote_base_path: /opt/almacen-de-reporte/data
+    report_host: srv-ansible
+
   tasks:
     - name: Asegurar directorio destino en servidor intermedio
       file:
