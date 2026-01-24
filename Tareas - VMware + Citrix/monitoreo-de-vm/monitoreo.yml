@@ -1,6 +1,6 @@
 ---
 - name: Verificar registro de maquina virtual en Citrix
-  hosts: srv-ctxp101
+  hosts: SRV-CTXP101
   gather_facts: yes
   
   tasks:
