@@ -32,7 +32,7 @@
             {{ unregistered.stdout }}
         status_code: 200
       delegate_to: localhost
-      when: unregistered.stdout | length > 0
+      when: unregistered.stdout is defined and unregistered.stdout | trim | length > 0
 
     - name: Enviar OK si todas estan registradas
       uri:
@@ -47,4 +47,4 @@
             Servidor: {{ inventory_hostname }}
         status_code: 200
       delegate_to: localhost
-      when: unregistered.stdout | length == 0
+      when: unregistered.stdout is not defined or unregistered.stdout | trim | length == 0
