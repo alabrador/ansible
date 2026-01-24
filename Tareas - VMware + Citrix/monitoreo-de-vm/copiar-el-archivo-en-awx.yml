@@ -4,8 +4,8 @@
   gather_facts: no
 
   vars:
-    remote_base_path: /opt/almacen-de-reporte/data
     report_host: srv-ansible
+    remote_base_path: /opt/almacen-de-reporte/data
 
   tasks:
     - name: Asegurar directorio destino en servidor intermedio
@@ -14,6 +14,8 @@
         state: directory
         mode: '0755'
       delegate_to: "{{ report_host }}"
+      vars:
+        ansible_connection: ssh
 
     - name: Copiar archivo desde Windows al servidor intermedio
       fetch:
@@ -21,3 +23,5 @@
         dest: "{{ remote_base_path }}/unregistered_machines_{{ inventory_hostname }}.txt"
         flat: yes
       delegate_to: "{{ report_host }}"
+      vars:
+        ansible_connection: ssh
