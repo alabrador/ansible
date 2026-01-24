@@ -1,27 +1,18 @@
 ---
-- name: Enviar reporte de máquinas Citrix sin registrar
-  hosts: srv-ddc01
+- name: Enviar reporte de máquinas Citrix por Telegram
+  hosts: localhost
   gather_facts: no
-  become: false
 
   vars:
-    windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"
-    local_tmp_file: "/tmp/unregistered_machines.txt"
+    local_tmp_file: "/tmp/unregistered_machines_srv-ddc01.txt"
     current_time: "{{ '%Y-%m-%d %H:%M' | strftime }}"
 
   tasks:
-    - name: Traer archivo desde Windows a AWX/Linux
-      fetch:
-        src: "{{ windows_tmp_file }}"
-        dest: "{{ local_tmp_file }}"
-        flat: yes
-      delegate_to: "{{ inventory_hostname }}"
-
     - name: Leer contenido del archivo
       set_fact:
         machines_text: "{{ lookup('file', local_tmp_file) | trim }}"
 
-    - name: Enviar alerta Telegram si hay máquinas sin registrar
+    - name: Enviar alerta si hay máquinas sin registrar
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
@@ -30,15 +21,14 @@
           chat_id: "{{ telegram_chat_id }}"
           text: |
             ⚠️ Citrix - Máquinas NO registradas
-            Servidor: {{ inventory_hostname }}
+            Servidor: srv-ddc01
             Fecha: {{ current_time }}
 
             {{ machines_text }}
         status_code: 200
       when: machines_text != "ALL_REGISTERED"
-      delegate_to: localhost
 
-    - name: Enviar OK Telegram si todas están registradas
+    - name: Enviar OK si todas están registradas
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
@@ -48,8 +38,7 @@
           text: |
             ✅ Citrix OK
             Todas las máquinas están registradas correctamente.
-            Servidor: {{ inventory_hostname }}
+            Servidor: srv-ddc01
             Fecha: {{ current_time }}
         status_code: 200
       when: machines_text == "ALL_REGISTERED"
-      delegate_to: localhost
