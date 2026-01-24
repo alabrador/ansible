@@ -1,70 +1,75 @@
 ---
-############################################################
-# PLAY ÚNICO - Verificar registro en Citrix Director
-############################################################
-- name: Verificar registro de VMs en Citrix Director
+- name: Verificar registro de máquina virtual en Citrix
   hosts: srv-ctxp101
-  gather_facts: no
-  become: false
-
-  vars:
-    vm_prefix: "SRV-CTXP"
-    vm_start: 101
-    vm_end: 145
-
+  gather_facts: yes
+  
   tasks:
+    - name: Verificar si el servicio Citrix VDA está corriendo
+      ansible.windows.win_service:
+        name: "BrokerAgent"
+      register: citrix_service
+      ignore_errors: yes
 
-    - name: Comprobar estado de registro en Citrix Director
-      win_shell: |
-        Add-PSSnapin Citrix.*
+    - name: Obtener información del servicio Citrix Desktop Service
+      ansible.windows.win_service_info:
+        name: "BrokerAgent"
+      register: service_info
+      ignore_errors: yes
 
-        # Generar la lista de nombres de VM
-        $vm_names = @(
-          {% for i in range(vm_start, vm_end + 1) %}
-          "{{ vm_prefix }}{{ '%03d' % i }}"{% if not loop.last %}, {% endif %}
-          {% endfor %}
-        )
-
-        # Obtener estado de registro de todas las VMs
-        $result = Get-BrokerMachine -MachineName $vm_names -ErrorAction SilentlyContinue | 
-                  Select-Object Name, RegistrationState, MachineCatalog, DesktopGroupName
-
-        $result | ConvertTo-Json -Depth 4
+    - name: Ejecutar comando PowerShell para verificar registro
+      ansible.windows.win_shell: |
+        Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
+        $machine = Get-BrokerMachine -MachineName "$env:COMPUTERNAME" -ErrorAction SilentlyContinue
+        if ($machine) {
+          Write-Output "Estado de Registro: $($machine.RegistrationState)"
+          Write-Output "Estado de Energía: $($machine.PowerState)"
+          Write-Output "Catálogo: $($machine.CatalogName)"
+          Write-Output "Delivery Group: $($machine.DesktopGroupName)"
+        } else {
+          Write-Output "ERROR: Máquina no encontrada en Citrix"
+        }
       register: citrix_status
+      ignore_errors: yes
+      delegate_to: localhost
+      become: false
 
-    - name: Separar VMs registradas y no registradas
+    - name: Verificar conectividad con el Delivery Controller
+      ansible.windows.win_shell: |
+        $regPath = "HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent"
+        if (Test-Path $regPath) {
+          $controllers = (Get-ItemProperty -Path $regPath -Name "ListOfDDCs" -ErrorAction SilentlyContinue).ListOfDDCs
+          Write-Output "Controladores configurados: $controllers"
+        } else {
+          Write-Output "ERROR: No se encuentra la configuración del VDA"
+        }
+      register: controller_info
+      ignore_errors: yes
+
+    - name: Preparar mensaje de Telegram
       set_fact:
-        vms_registradas: >-
-          {{
-            (citrix_status.stdout | from_json)
-            | selectattr('RegistrationState', 'eq', 'Registered')
-            | list
-          }}
-        vms_no_registradas: >-
-          {{
-            (citrix_status.stdout | from_json)
-            | selectattr('RegistrationState', 'ne', 'Registered')
-            | list
-          }}
-
-    - name: Preparar mensaje completo para Telegram
-      set_fact:
-        telegram_message: >-
-          🖥 *Resumen de VMs Citrix Director*
-
-          ✅ *Registradas ({{ vms_registradas | length }}):*
-          {%- for vm in vms_registradas %}
-          - {{ vm.Name }} (Estado: {{ vm.RegistrationState }})
-          {%- endfor %}
-
-          ⚠️ *No registradas ({{ vms_no_registradas | length }}):*
-          {%- if vms_no_registradas | length > 0 %}
-          {%- for vm in vms_no_registradas %}
-          - {{ vm.Name }} (Estado: {{ vm.RegistrationState }})
-          {%- endfor %}
-          {%- else %}
-          Ninguna
-          {%- endif %}
+        telegram_message: |
+          🖥️ *Verificación Citrix - srv-ctxp101*
+          
+          *Servicio VDA:*
+          {% if citrix_service.exists is defined and citrix_service.exists %}
+          ✅ Estado: {{ service_info.services[0].state | default('Desconocido') }}
+          ✅ Startup: {{ service_info.services[0].start_mode | default('Desconocido') }}
+          {% else %}
+          ❌ Servicio no encontrado
+          {% endif %}
+          
+          *Estado de Registro:*
+```
+          {{ citrix_status.stdout | default('No se pudo obtener información') }}
+```
+          
+          *Controladores:*
+```
+          {{ controller_info.stdout | default('No disponible') }}
+```
+          
+          *Fecha:* {{ ansible_date_time.iso8601 }}
+      delegate_to: localhost
 
     - name: Enviar resumen por Telegram
       uri:
