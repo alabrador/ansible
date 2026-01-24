@@ -1,25 +1,31 @@
 ---
-- name: Verificar máquinas Citrix y notificar con Telegram
+- name: Verificar máquinas Citrix y notificar por Telegram
   hosts: srv-ddc01
   gather_facts: no
   become: false
 
   vars:
-    # Fecha/hora estándar y segura para AWX
+    # Fecha/hora estándar (Linux AWX)
     current_time: "{{ '%Y-%m-%d %H:%M' | strftime }}"
 
   tasks:
+
+    # ============================
+    # Bloque 1: Consultar Windows
+    # ============================
     - name: Obtener máquinas sin registrar en Citrix Studio
       win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
         $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
 
         if ($unregistered) {
+          $lines = @()
           foreach ($machine in $unregistered) {
-            Write-Output "🖥 $($machine.MachineName) | RegistrationState: $($machine.RegistrationState) | Power: $($machine.PowerState) | IP: $($machine.IPAddress)"
+            $lines += "🖥 Name: $($machine.MachineName) | State: $($machine.RegistrationState) | Power: $($machine.PowerState) | IP: $($machine.IPAddress)"
           }
+          $lines -join "`n"
         } else {
-          Write-Output ""
+          ""
         }
       register: unregistered_machines
       changed_when: false
@@ -27,6 +33,10 @@
     - name: Mostrar resultado en consola
       debug:
         msg: "{{ unregistered_machines.stdout }}"
+
+    # ============================
+    # Bloque 2: Enviar Telegram
+    # ============================
 
     - name: Enviar alerta Telegram si hay máquinas sin registrar
       uri:
@@ -43,7 +53,7 @@
             {{ unregistered_machines.stdout }}
         status_code: 200
       delegate_to: localhost
-      when: unregistered_machines.stdout is defined and unregistered_machines.stdout | trim | length > 0
+      when: unregistered_machines.stdout | trim | length > 0
 
     - name: Enviar OK Telegram si todas están registradas
       uri:
@@ -59,4 +69,4 @@
             Fecha: {{ current_time }}
         status_code: 200
       delegate_to: localhost
-      when: unregistered_machines.stdout is not defined or unregistered_machines.stdout | trim | length == 0
+      when: unregistered_machines.stdout | trim | length == 0
