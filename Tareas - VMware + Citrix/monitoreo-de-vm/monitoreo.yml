@@ -1,68 +1,70 @@
 ---
-- name: Verificar registro de maquina virtual en Citrix
-  hosts: SRV-CTXP101
+- name: Verificar maquinas sin registrar en Citrix
+  hosts: srv-ddc01
   gather_facts: yes
   
   tasks:
-    - name: Verificar si el servicio Citrix VDA esta corriendo
-      ansible.windows.win_service:
-        name: "BrokerAgent"
-      register: citrix_service
-      ignore_errors: yes
-
-    - name: Obtener informacion del servicio Citrix Desktop Service
-      ansible.windows.win_service_info:
-        name: "BrokerAgent"
-      register: service_info
-      ignore_errors: yes
-
-    - name: Ejecutar comando PowerShell para verificar registro
+    - name: Consultar todas las maquinas sin registrar en Citrix Studio
       ansible.windows.win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
-        $machine = Get-BrokerMachine -MachineName "$env:COMPUTERNAME" -ErrorAction SilentlyContinue
-        if ($machine) {
-          Write-Output "Estado de Registro: $($machine.RegistrationState)"
-          Write-Output "Estado de Energia: $($machine.PowerState)"
-          Write-Output "Catalogo: $($machine.CatalogName)"
-          Write-Output "Delivery Group: $($machine.DesktopGroupName)"
+        $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
+        if ($unregistered) {
+          Write-Output "=== MAQUINAS SIN REGISTRAR ==="
+          Write-Output "Total: $($unregistered.Count)"
+          Write-Output ""
+          foreach ($machine in $unregistered) {
+            Write-Output "Nombre: $($machine.MachineName)"
+            Write-Output "Catalogo: $($machine.CatalogName)"
+            Write-Output "Delivery Group: $($machine.DesktopGroupName)"
+            Write-Output "Estado Energia: $($machine.PowerState)"
+            Write-Output "IP: $($machine.IPAddress)"
+            Write-Output "Sesiones: $($machine.SessionCount)"
+            Write-Output "----------------------------------------"
+          }
         } else {
-          Write-Output "ERROR: Maquina no encontrada en Citrix"
+          Write-Output "=== MAQUINAS SIN REGISTRAR ==="
+          Write-Output "Total: 0"
+          Write-Output "No hay maquinas sin registrar - Todo OK"
         }
-      register: citrix_status
-      ignore_errors: yes
-      delegate_to: localhost
-      become: false
+      register: unregistered_machines
 
-    - name: Verificar conectividad con el Delivery Controller
+    - name: Consultar resumen general de todos los Delivery Groups
       ansible.windows.win_shell: |
-        $regPath = "HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent"
-        if (Test-Path $regPath) {
-          $controllers = (Get-ItemProperty -Path $regPath -Name "ListOfDDCs" -ErrorAction SilentlyContinue).ListOfDDCs
-          Write-Output "Controladores configurados: $controllers"
-        } else {
-          Write-Output "ERROR: No se encuentra la configuracion del VDA"
+        Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
+        $allDG = Get-BrokerDesktopGroup -ErrorAction SilentlyContinue
+        Write-Output "=== RESUMEN DELIVERY GROUPS ==="
+        foreach ($dg in $allDG) {
+          $unregCount = $dg.TotalMachines - $dg.MachinesRegistered
+          Write-Output "Grupo: $($dg.Name)"
+          Write-Output "  Total Maquinas: $($dg.TotalMachines)"
+          Write-Output "  Registradas: $($dg.MachinesRegistered)"
+          Write-Output "  Sin Registrar: $unregCount"
+          Write-Output "  Sesiones Activas: $($dg.Sessions)"
+          Write-Output "---"
         }
-      register: controller_info
+      register: delivery_groups_summary
+      ignore_errors: yes
+
+    - name: Consultar todas las maquinas registradas
+      ansible.windows.win_shell: |
+        Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
+        $registered = Get-BrokerMachine -RegistrationState Registered -ErrorAction SilentlyContinue
+        Write-Output "=== MAQUINAS REGISTRADAS ==="
+        Write-Output "Total: $($registered.Count)"
+      register: registered_count
       ignore_errors: yes
 
     - name: Preparar mensaje de Telegram
       set_fact:
         telegram_message: |
-          Verificacion Citrix - srv-ctxp101
+          === REPORTE CITRIX STUDIO ===
+          Servidor: srv-ddc01
           
-          Servicio VDA:
-          {% if citrix_service.exists is defined and citrix_service.exists %}
-          Estado: {{ service_info.services[0].state | default('Desconocido') }}
-          Startup: {{ service_info.services[0].start_mode | default('Desconocido') }}
-          {% else %}
-          Servicio no encontrado
-          {% endif %}
+          {{ registered_count.stdout }}
           
-          Estado de Registro:
-          {{ citrix_status.stdout | default('No se pudo obtener informacion') }}
+          {{ unregistered_machines.stdout }}
           
-          Controladores:
-          {{ controller_info.stdout | default('No disponible') }}
+          {{ delivery_groups_summary.stdout }}
           
           Fecha: {{ ansible_date_time.iso8601 }}
       delegate_to: localhost
