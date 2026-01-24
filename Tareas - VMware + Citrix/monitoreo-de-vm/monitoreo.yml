@@ -6,61 +6,85 @@
 
   vars:
     current_time: "{{ '%Y-%m-%d %H:%M' | strftime }}"
+    tmp_file: "C:\\Windows\\Temp\\unregistered_machines.txt"
 
   tasks:
 
-    - name: Obtener máquinas sin registrar en Citrix Studio
-      win_shell: |
-        Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
-        $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
+    # ============================
+    # BLOQUE 1: Windows - Guardar resultado en archivo
+    # ============================
+    - block:
+        - name: Obtener máquinas sin registrar en Citrix Studio
+          win_shell: |
+            Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
+            $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
 
-        if ($unregistered) {
-          $lines = @()
-          foreach ($machine in $unregistered) {
-            # Si IP es nulo, mostrar "-"
-            $ip = if ($machine.IPAddress) { $machine.IPAddress } else { "-" }
-            $lines += "🖥 Name: $($machine.MachineName) | State: $($machine.RegistrationState) | Power: $($machine.PowerState) | IP: $ip"
-          }
-          $lines -join "`n"
-        } else {
-          ""
-        }
-      register: unregistered_machines
-      changed_when: false
+            if ($unregistered) {
+              $lines = @()
+              foreach ($machine in $unregistered) {
+                $ip = if ($machine.IPAddress) { $machine.IPAddress } else { "-" }
+                $lines += "🖥 Name: $($machine.MachineName) | State: $($machine.RegistrationState) | Power: $($machine.PowerState) | IP: $ip"
+              }
+              $lines -join "`n"
+            } else {
+              "ALL_REGISTERED"
+            }
+          register: unregistered_machines
+          changed_when: false
 
-    - name: Mostrar resultado en consola (limpio)
-      debug:
-        msg: "{{ unregistered_machines.stdout | replace('\r','') | trim }}"
+        - name: Guardar resultado en archivo temporal en Windows
+          win_copy:
+            content: "{{ unregistered_machines.stdout }}"
+            dest: "{{ tmp_file }}"
 
-    - name: Enviar alerta Telegram si hay máquinas sin registrar
-      uri:
-        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
-        method: POST
-        body_format: json
-        body:
-          chat_id: "{{ telegram_chat_id }}"
-          text: |
-            ⚠️ Citrix - Máquinas NO registradas
-            Servidor: {{ inventory_hostname }}
-            Fecha: {{ current_time }}
+    # ============================
+    # BLOQUE 2: Linux/AWX - Leer archivo desde Windows
+    # ============================
+    - block:
+        - name: Traer archivo temporal a AWX/Linux
+          fetch:
+            src: "{{ tmp_file }}"
+            dest: "/tmp/unregistered_machines_{{ inventory_hostname }}.txt"
+            flat: yes
 
-            {{ unregistered_machines.stdout | replace('\r','') | trim }}
-        status_code: 200
-      delegate_to: localhost
-      when: unregistered_machines.stdout | replace('\r','') | trim | length > 0
+        - name: Leer contenido del archivo
+          slurp:
+            src: "/tmp/unregistered_machines_{{ inventory_hostname }}.txt"
+          register: machines_content
 
-    - name: Enviar OK Telegram si todas están registradas
-      uri:
-        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
-        method: POST
-        body_format: json
-        body:
-          chat_id: "{{ telegram_chat_id }}"
-          text: |
-            ✅ Citrix OK
-            Todas las máquinas están registradas correctamente.
-            Servidor: {{ inventory_hostname }}
-            Fecha: {{ current_time }}
-        status_code: 200
-      delegate_to: localhost
-      when: unregistered_machines.stdout | replace('\r','') | trim | length == 0
+        - name: Decodificar contenido
+          set_fact:
+            machines_text: "{{ machines_content.content | b64decode | trim }}"
+
+        - name: Enviar alerta Telegram si hay máquinas sin registrar
+          uri:
+            url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+            method: POST
+            body_format: json
+            body:
+              chat_id: "{{ telegram_chat_id }}"
+              text: |
+                ⚠️ Citrix - Máquinas NO registradas
+                Servidor: {{ inventory_hostname }}
+                Fecha: {{ current_time }}
+
+                {{ machines_text }}
+            status_code: 200
+          when: machines_text != "ALL_REGISTERED"
+
+        - name: Enviar OK Telegram si todas están registradas
+          uri:
+            url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+            method: POST
+            body_format: json
+            body:
+              chat_id: "{{ telegram_chat_id }}"
+              text: |
+                ✅ Citrix OK
+                Todas las máquinas están registradas correctamente.
+                Servidor: {{ inventory_hostname }}
+                Fecha: {{ current_time }}
+            status_code: 200
+          when: machines_text == "ALL_REGISTERED"
+
+      run_once: true
