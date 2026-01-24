@@ -1,17 +1,27 @@
-- name: Copiar archivo Windows a srv-ansible
+---
+- name: Leer archivo en Windows y enviarlo a Linux
   hosts: srv-ddc01
   gather_facts: no
 
-  tasks:
-    - name: Traer archivo a controller
-      win_fetch:
-        src: C:\Temp\unregistered_machines.txt
-        dest: /tmp/unregistered_machines.txt
-        flat: yes
-      delegate_to: localhost
+  vars:
+    archivo_origen: C:\Temp\unregistered_machines.txt
+    archivo_destino: /opt/almacen-de-reporte/unregistered_machines.txt
 
-    - name: Enviar archivo a srv-ansible
-      copy:
-        src: /tmp/unregistered_machines.txt
-        dest: /opt/almacen-de-reporte/unregistered_machines.txt
+  tasks:
+
+    - name: Leer archivo desde Windows y codificarlo en Base64
+      win_shell: |
+        [Convert]::ToBase64String(
+          [System.IO.File]::ReadAllBytes("{{ archivo_origen }}")
+        )
+      register: archivo_b64
+
+    - name: Copiar archivo al servidor Linux
       delegate_to: srv-ansible
+      become: true
+      copy:
+        content: "{{ archivo_b64.stdout | b64decode }}"
+        dest: "{{ archivo_destino }}"
+        owner: root
+        group: root
+        mode: '0644'
