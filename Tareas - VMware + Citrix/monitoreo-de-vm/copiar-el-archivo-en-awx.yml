@@ -1,11 +1,15 @@
 ---
-- name: Traer archivo de Windows al host de control (AWX)
+- name: Traer archivo desde Windows al contenedor de reportes
   hosts: srv-ddc01
   gather_facts: no
-  tasks:
+  become: false
 
-    - name: Copiar archivo al host de control
+  vars:
+    contenedor_path: "/opt/almacen-de-reporte/data/unregistered_machines_{{ inventory_hostname }}.txt"
+
+  tasks:
+    - name: Copiar archivo de Windows al host de AWX
       fetch:
         src: C:\Temp\unregistered_machines.txt
-        dest: /tmp/unregistered_machines_srv-ddc01.txt
+        dest: "{{ contenedor_path }}"
         flat: yes
