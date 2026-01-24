@@ -16,6 +16,7 @@
       delegate_to: "{{ report_host }}"
       vars:
         ansible_connection: ssh
+        ansible_port: 22
 
     - name: Copiar archivo desde Windows al servidor intermedio
       fetch:
@@ -25,3 +26,4 @@
       delegate_to: "{{ report_host }}"
       vars:
         ansible_connection: ssh
+        ansible_port: 22
