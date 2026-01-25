@@ -1,11 +1,11 @@
 ---
-- name: Generar archivo y copiarlo al controller AWX
+# PLAY 1 – Windows (solo Windows)
+- name: Generar archivo en Windows
   hosts: srv-ddc01
   gather_facts: no
 
   vars:
     windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"
-    controller_dest: "/tmp/unregistered_machines.txt"
 
   tasks:
     - name: Obtener máquinas sin registrar
@@ -30,10 +30,21 @@
         content: "{{ unregistered_machines.stdout }}"
         dest: "{{ windows_tmp_file }}"
 
-    - name: Guardar archivo en el controller AWX
+    - name: Guardar contenido como fact global
+      set_fact:
+        report_content: "{{ unregistered_machines.stdout }}"
+
+# PLAY 2 – Controller AWX (Linux puro)
+- name: Guardar archivo en el controller AWX
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    controller_dest: "/tmp/unregistered_machines.txt"
+
+  tasks:
+    - name: Crear archivo en el controller
       copy:
-        content: "{{ unregistered_machines.stdout }}"
+        content: "{{ hostvars['srv-ddc01'].report_content }}"
         dest: "{{ controller_dest }}"
-      delegate_to: localhost
-      connection: local
-      run_once: true
