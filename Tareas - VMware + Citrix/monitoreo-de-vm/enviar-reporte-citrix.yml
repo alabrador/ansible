@@ -5,13 +5,14 @@
   connection: local
 
   tasks:
-    - name: Enviar mensaje por Telegram usando artifact
+    - name: Enviar mensaje por Telegram
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
         body_format: json
         body:
           chat_id: "{{ telegram_chat_id }}"
-          text: "{{ hostvars['srv-ddc01'].unregistered_machines_report | default('ALL_REGISTERED') }}"
+          text: |
+            {{ hostvars['srv-ddc01'].unregistered_machines.stdout | default('ALL_REGISTERED') }}
         status_code: 200
       run_once: true
