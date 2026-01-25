@@ -17,7 +17,7 @@
           $lines = @()
           foreach ($m in $unregistered) {
             $ip = if ($m.IPAddress) { $m.IPAddress } else { "-" }
-            $lines += "🖥 Name: $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState) | IP: $ip"
+            $lines += "🖥 Name: $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState)"
           }
           $lines -join "`n"
         } else {
