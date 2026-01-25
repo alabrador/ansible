@@ -40,6 +40,6 @@
           unregistered_machines_report: "{{ unregistered_machines.stdout }}"
         aggregate: false
 
-    - name: Debug artifact
+    - name: Debug local artifact
       debug:
-        msg: "Artifact guardado: {{ hostvars['srv-ddc01'].unregistered_machines_report }}"
+        msg: "Esto se guardará en artifact: {{ unregistered_machines.stdout }}"
