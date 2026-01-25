@@ -1,4 +1,5 @@
-- name: Generar archivo y copiarlo al controller
+---
+- name: Generar archivo y copiarlo al controller AWX
   hosts: srv-ddc01
   gather_facts: no
 
@@ -29,8 +30,10 @@
         content: "{{ unregistered_machines.stdout }}"
         dest: "{{ windows_tmp_file }}"
 
-    - name: Copiar archivo al controller (AWX)
+    - name: Guardar archivo en el controller AWX
       copy:
         content: "{{ unregistered_machines.stdout }}"
         dest: "{{ controller_dest }}"
       delegate_to: localhost
+      connection: local
+      run_once: true
