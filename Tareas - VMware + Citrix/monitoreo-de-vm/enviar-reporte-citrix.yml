@@ -4,10 +4,23 @@
   gather_facts: no
   connection: local
 
+  vars:
+    local_tmp_file: "/tmp/unregistered_machines.txt"
+
   tasks:
-    - name: Revisar artifact recibido
+
+    - name: Leer reporte temporal
+      slurp:
+        src: "{{ local_tmp_file }}"
+      register: reporte_tmp
+
+    - name: Convertir contenido de base64 a texto
+      set_fact:
+        reporte_texto: "{{ reporte_tmp.content | b64decode }}"
+
+    - name: Debug - revisar contenido que se enviará
       debug:
-        msg: "Artifact del workflow: {{ workflow_artifacts['unregistered_machines_report'] }}"
+        msg: "{{ reporte_texto }}"
 
     - name: Enviar mensaje por Telegram
       uri:
@@ -16,5 +29,5 @@
         body_format: json
         body:
           chat_id: "{{ telegram_chat_id }}"
-          text: "{{ workflow_artifacts['unregistered_machines_report'] }}"
+          text: "{{ reporte_texto }}"
         status_code: 200
