@@ -1,5 +1,5 @@
 ---
-- name: Generar reporte Citrix y guardar artifact
+- name: Generar reporte Citrix no registradas y enviar por Telegram
   hosts: srv-ddc01
   gather_facts: no
   become: false
@@ -8,6 +8,7 @@
     windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"
 
   tasks:
+
     - name: Obtener máquinas Citrix sin registrar
       win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
@@ -26,13 +27,22 @@
       register: unregistered_machines
       changed_when: false
 
+    - name: Debug - revisar contenido en stdout
+      debug:
+        msg: "{{ unregistered_machines.stdout }}"
+
     - name: Guardar contenido en archivo temporal en Windows
       win_copy:
         content: "{{ unregistered_machines.stdout | default('ALL_REGISTERED') }}"
         dest: "{{ windows_tmp_file }}"
 
-    - name: Guardar artifact del job
-      set_stats:
-        data:
-          unregistered_machines_report: "{{ unregistered_machines.stdout }}"
-        aggregate: false
+    - name: Enviar reporte por Telegram desde el controller
+      delegate_to: localhost
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: "{{ unregistered_machines.stdout }}"
+        status_code: 200
