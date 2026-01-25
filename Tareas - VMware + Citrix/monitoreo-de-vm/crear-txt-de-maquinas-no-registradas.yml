@@ -1,7 +1,11 @@
 ---
-- name: Generar reporte Citrix no registradas (Windows)
+- name: Generar reporte Citrix y debug
   hosts: srv-ddc01
   gather_facts: no
+  become: false
+
+  vars:
+    windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"
 
   tasks:
     - name: Obtener máquinas Citrix sin registrar
@@ -9,20 +13,33 @@
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
         $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
 
-        if ($unregistered) {
-          $lines = @()
-          foreach ($m in $unregistered) {
-            $lines += "🖥 Name: $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState)"
-          }
-          $lines -join "`n"
+        if ($unregistered.Count -gt 0) {
+            $lines = @()
+            foreach ($m in $unregistered) {
+                $ip = if ($m.IPAddress) { $m.IPAddress } else { "-" }
+                $lines += "🖥 Name: $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState) | IP: $ip"
+            }
+            $lines -join "`n"
         } else {
-          "ALL_REGISTERED"
+            "ALL_REGISTERED"
         }
       register: unregistered_machines
       changed_when: false
+
+    - name: Debug stdout raw
+      debug:
+        msg: "Contenido stdout: {{ unregistered_machines.stdout }}"
+
+    - name: Debug stdout_lines
+      debug:
+        msg: "Contenido stdout_lines: {{ unregistered_machines.stdout_lines }}"
 
     - name: Guardar reporte como artifact
       set_stats:
         data:
           unregistered_machines_report: "{{ unregistered_machines.stdout }}"
         aggregate: false
+
+    - name: Debug artifact
+      debug:
+        msg: "Artifact guardado: {{ hostvars['srv-ddc01'].unregistered_machines_report }}"
