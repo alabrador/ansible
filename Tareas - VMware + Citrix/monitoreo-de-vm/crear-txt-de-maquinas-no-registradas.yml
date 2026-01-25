@@ -4,10 +4,6 @@
   gather_facts: no
   become: false
 
-  vars:
-    windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"
-    local_tmp_file: "/tmp/unregistered_machines.txt"
-
   tasks:
 
     - name: Obtener máquinas Citrix sin registrar
@@ -19,7 +15,7 @@
             $lines = @()
             foreach ($m in $unregistered) {
                 $ip = if ($m.IPAddress) { $m.IPAddress } else { "-" }
-                $lines += "🖥 Name: $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState)"
+                $lines += "🖥 Name: $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState) | IP: $ip"
             }
             $lines -join "`n"
         } else {
@@ -28,13 +24,12 @@
       register: unregistered_machines
       changed_when: false
 
-    - name: Guardar contenido en archivo temporal en Windows
-      win_copy:
-        content: "{{ unregistered_machines.stdout | default('ALL_REGISTERED') }}"
-        dest: "{{ windows_tmp_file }}"
+    - name: Debug - mostrar contenido generado
+      debug:
+        msg: "{{ unregistered_machines.stdout }}"
 
-    - name: Copiar archivo temporal al controller (Linux/AWX)
-      fetch:
-        src: "{{ windows_tmp_file }}"
-        dest: "{{ local_tmp_file }}"
-        flat: yes
+    - name: Guardar artifact del workflow
+      set_stats:
+        data:
+          unregistered_machines_report: "{{ unregistered_machines.stdout }}"
+        scope: global
