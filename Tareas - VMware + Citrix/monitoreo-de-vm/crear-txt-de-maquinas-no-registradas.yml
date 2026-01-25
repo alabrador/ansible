@@ -1,11 +1,10 @@
 ---
-# PLAY 1 – Windows (solo Windows)
-- name: Generar archivo en Windows
+###############################################################################
+# PLAY 1 – Windows: generar el contenido
+###############################################################################
+- name: Generar reporte de máquinas Citrix no registradas (Windows)
   hosts: srv-ddc01
   gather_facts: no
-
-  vars:
-    windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"
 
   tasks:
     - name: Obtener máquinas sin registrar
@@ -25,26 +24,20 @@
       register: unregistered_machines
       changed_when: false
 
-    - name: Guardar archivo en Windows
-      win_copy:
-        content: "{{ unregistered_machines.stdout }}"
-        dest: "{{ windows_tmp_file }}"
-
-    - name: Guardar contenido como fact global
+    - name: Exponer contenido al controller
       set_fact:
         report_content: "{{ unregistered_machines.stdout }}"
 
-# PLAY 2 – Controller AWX (Linux puro)
-- name: Guardar archivo en el controller AWX
+###############################################################################
+# PLAY 2 – Controller AWX (Linux)
+###############################################################################
+- name: Guardar reporte en el controller AWX
   hosts: localhost
   connection: local
   gather_facts: no
 
-  vars:
-    controller_dest: "/tmp/unregistered_machines.txt"
-
   tasks:
-    - name: Crear archivo en el controller
+    - name: Guardar archivo en el workspace del proyecto
       copy:
         content: "{{ hostvars['srv-ddc01'].report_content }}"
-        dest: "{{ controller_dest }}"
+        dest: "/runner/project/unregistered_machines.txt"
