@@ -29,15 +29,27 @@
         report_content: "{{ unregistered_machines.stdout }}"
 
 ###############################################################################
-# PLAY 2 – Controller AWX (Linux)
+# PLAY 2 – Controller AWX (Linux real, sin copy)
 ###############################################################################
 - name: Guardar reporte en el controller AWX
   hosts: localhost
   connection: local
   gather_facts: no
 
+  vars:
+    report_path: "/opt/unregistered_machines.txt"
+
   tasks:
-    - name: Guardar archivo en el workspace del proyecto
-      copy:
-        content: "{{ hostvars['srv-ddc01'].report_content }}"
-        dest: "/runner/project/unregistered_machines.txt"
+    - name: Crear directorio destino
+      shell: |
+        mkdir -p /opt
+      args:
+        executable: /bin/sh
+
+    - name: Escribir archivo directamente en el controller
+      shell: |
+        cat << 'EOF' > {{ report_path }}
+        {{ hostvars['srv-ddc01'].report_content }}
+        EOF
+      args:
+        executable: /bin/sh
