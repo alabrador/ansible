@@ -6,6 +6,7 @@
 
   vars:
     windows_tmp_file: "C:\\Temp\\unregistered_machines.txt"
+    controller_dest: "/tmp/unregistered_machines.txt"
 
   tasks:
     - name: Obtener máquinas sin registrar
@@ -16,7 +17,6 @@
         if ($unregistered) {
           $lines = @()
           foreach ($m in $unregistered) {
-            $ip = if ($m.IPAddress) { $m.IPAddress } else { "-" }
             $lines += "🖥 Name: $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState)"
           }
           $lines -join "`n"
@@ -30,3 +30,9 @@
       win_copy:
         content: "{{ unregistered_machines.stdout | default('ALL_REGISTERED') }}"
         dest: "{{ windows_tmp_file }}"
+
+    - name: Copiar archivo desde Windows al controller (AWX)
+      win_fetch:
+        src: "{{ windows_tmp_file }}"
+        dest: "{{ controller_dest }}"
+        flat: yes
