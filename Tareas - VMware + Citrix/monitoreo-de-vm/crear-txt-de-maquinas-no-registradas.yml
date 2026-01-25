@@ -1,10 +1,13 @@
 ---
 ###############################################################################
-# PLAY 1 – Windows: generar el contenido
+# PLAY ÚNICO – Windows + Controller (delegación correcta)
 ###############################################################################
-- name: Generar reporte de máquinas Citrix no registradas (Windows)
+- name: Generar reporte Citrix y guardarlo en el controller AWX
   hosts: srv-ddc01
   gather_facts: no
+
+  vars:
+    report_path: "/opt/unregistered_machines.txt"
 
   tasks:
     - name: Obtener máquinas sin registrar
@@ -24,32 +27,23 @@
       register: unregistered_machines
       changed_when: false
 
-    - name: Exponer contenido al controller
-      set_fact:
-        report_content: "{{ unregistered_machines.stdout }}"
+    - name: Crear directorio /opt en el controller
+      shell: mkdir -p /opt
+      delegate_to: 127.0.0.1
+      vars:
+        ansible_connection: local
+        ansible_shell_type: sh
+        ansible_python_interpreter: /usr/bin/python3
+      run_once: true
 
-###############################################################################
-# PLAY 2 – Controller AWX (Linux real, sin copy)
-###############################################################################
-- name: Guardar reporte en el controller AWX
-  hosts: localhost
-  connection: local
-  gather_facts: no
-
-  vars:
-    report_path: "/opt/unregistered_machines.txt"
-
-  tasks:
-    - name: Crear directorio destino
-      shell: |
-        mkdir -p /opt
-      args:
-        executable: /bin/sh
-
-    - name: Escribir archivo directamente en el controller
+    - name: Escribir archivo en el controller AWX
       shell: |
         cat << 'EOF' > {{ report_path }}
-        {{ hostvars['srv-ddc01'].report_content }}
+        {{ unregistered_machines.stdout }}
         EOF
-      args:
-        executable: /bin/sh
+      delegate_to: 127.0.0.1
+      vars:
+        ansible_connection: local
+        ansible_shell_type: sh
+        ansible_python_interpreter: /usr/bin/python3
+      run_once: true
