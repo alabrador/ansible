@@ -1,23 +1,17 @@
+---
 - name: Enviar reporte Citrix por Telegram
   hosts: localhost
   gather_facts: no
-  vars:
-    report_path: "/opt/almacen-de-reporte/data"
+  connection: local
 
   tasks:
-    - name: Leer archivos de Windows
-      shell: cat {{ report_path }}/*.txt
-      register: citrix_reports
-
-    - name: Enviar alerta por Telegram si hay máquinas sin registrar
+    - name: Enviar mensaje por Telegram usando artifact
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
         body_format: json
         body:
           chat_id: "{{ telegram_chat_id }}"
-          text: |
-            ⚠️ Citrix - Máquinas NO registradas
-
-            {{ citrix_reports.stdout }}
-      delegate_to: localhost
+          text: "{{ hostvars['srv-ddc01'].unregistered_machines_report | default('ALL_REGISTERED') }}"
+        status_code: 200
+      run_once: true
