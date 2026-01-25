@@ -28,8 +28,8 @@
       debug:
         msg: "{{ unregistered_machines.stdout }}"
 
-    - name: Guardar artifact del workflow
-      set_stats:
-        data:
-          unregistered_machines_report: "{{ unregistered_machines.stdout }}"
-        scope: global
+    - name: Guardar artifact para workflow
+      copy:
+        content: "{{ unregistered_machines.stdout | default('ALL_REGISTERED') }}"
+        dest: "/tmp/unregistered_machines.txt"
+      delegate_to: localhost
