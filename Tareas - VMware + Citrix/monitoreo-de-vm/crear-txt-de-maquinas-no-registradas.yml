@@ -1,7 +1,4 @@
 ---
-###############################################################################
-# PLAY 1 – Windows: generar reporte y guardarlo como artifact
-###############################################################################
 - name: Generar reporte Citrix no registradas (Windows)
   hosts: srv-ddc01
   gather_facts: no
@@ -24,28 +21,8 @@
       register: unregistered_machines
       changed_when: false
 
-    - name: Guardar reporte como artifact del job
+    - name: Guardar reporte como artifact
       set_stats:
         data:
           unregistered_machines_report: "{{ unregistered_machines.stdout }}"
         aggregate: false
-
-###############################################################################
-# PLAY 2 – Controller Linux: enviar reporte por Telegram
-###############################################################################
-- name: Enviar reporte por Telegram desde el controller
-  hosts: localhost
-  gather_facts: no
-  connection: local
-
-  tasks:
-    - name: Enviar reporte por Telegram
-      uri:
-        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
-        method: POST
-        body_format: json
-        body:
-          chat_id: "{{ telegram_chat_id }}"
-          text: "{{ hostvars['srv-ddc01'].unregistered_machines_report | default('ALL_REGISTERED') }}"
-        status_code: 200
-      run_once: true
