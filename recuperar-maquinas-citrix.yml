@@ -1,0 +1,21 @@
+---
+- name: Reiniciar VMs Citrix Unregistered vía WinRM
+  hosts: "{{ citrix_on_unregistered | default([]) }}"
+  gather_facts: no
+  serial: 1   # 🔐 reinicio controlado, una a una
+  any_errors_fatal: false
+
+  tasks:
+
+    - name: Comprobar conectividad WinRM
+      win_ping:
+
+    - name: Reiniciar servidor Windows
+      win_reboot:
+        reboot_timeout: 900
+        msg: "Reinicio automático por VM Citrix Unregistered"
+        post_reboot_delay: 60
+
+    - name: Esperar a que vuelva WinRM
+      wait_for_connection:
+        timeout: 600
