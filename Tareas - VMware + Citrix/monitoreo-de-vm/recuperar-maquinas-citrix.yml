@@ -1,8 +1,25 @@
 ---
 - name: Reiniciar VMs Citrix Unregistered vía WinRM
-  hosts: "{{ citrix_on_unregistered | default([]) }}"
+  hosts: localhost
   gather_facts: no
-  serial: 1   # 🔐 reinicio controlado, una a una
+
+  tasks:
+
+    - name: Verificar si hay VMs Unregistered
+      debug:
+        msg: "VMs a reiniciar: {{ citrix_on_unregistered }}"
+      when: citrix_on_unregistered is defined
+
+    - name: Añadir VMs Unregistered al grupo dinámico
+      add_host:
+        name: "{{ item }}"
+        groups: citrix_unregistered
+      loop: "{{ citrix_on_unregistered | default([]) }}"
+
+- name: Reiniciar VMs Citrix Unregistered vía WinRM
+  hosts: citrix_unregistered
+  gather_facts: no
+  serial: 1
   any_errors_fatal: false
 
   tasks:
