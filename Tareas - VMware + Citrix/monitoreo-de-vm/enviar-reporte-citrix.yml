@@ -1,7 +1,7 @@
 ---
 - name: Enviar reporte Citrix por Telegram
   hosts: localhost
-  gather_facts: no
+  gather_facts: no  # No necesitamos recopilar facts
 
   vars:
     # Variable recibida desde Job 1 vía Workflow
@@ -9,11 +9,15 @@
 
   tasks:
 
+    - name: Obtener fecha y hora actual del sistema Linux
+      set_fact:
+        current_datetime: "{{ lookup('pipe','date \"+%Y-%m-%d %H:%M:%S\"') }}"
+
     - name: Preparar texto del mensaje
       set_fact:
         telegram_message: |
           📊 Reporte Citrix – Máquinas no registradas
-          🕒 {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+          🕒 {{ current_datetime }}
 
           {{ citrix_reporte }}
 
