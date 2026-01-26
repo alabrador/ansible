@@ -4,23 +4,18 @@
   gather_facts: no
 
   vars:
-    report_tmp_dir: "/tmp/reportes"
-    report_file: "citrix_no_registradas.txt"
+    # Variable recibida desde Job 1 vía Workflow
+    citrix_reporte: ""
 
   tasks:
 
-    - name: Leer reporte temporal
-      slurp:
-        src: "{{ report_tmp_dir }}/{{ report_file }}"
-      register: reporte_raw
-
-    - name: Convertir reporte a texto
+    - name: Preparar texto del mensaje
       set_fact:
-        reporte_texto: |
+        telegram_message: |
           📊 Reporte Citrix – Máquinas no registradas
           🕒 {{ ansible_date_time.date }} {{ ansible_date_time.time }}
 
-          {{ reporte_raw.content | b64decode }}
+          {{ citrix_reporte }}
 
     - name: Enviar mensaje por Telegram
       uri:
@@ -29,5 +24,5 @@
         body_format: json
         body:
           chat_id: "{{ telegram_chat_id }}"
-          text: "{{ reporte_texto }}"
+          text: "{{ telegram_message }}"
         status_code: 200

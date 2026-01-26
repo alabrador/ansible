@@ -4,10 +4,6 @@
   gather_facts: no
   become: false
 
-  vars:
-    report_tmp_dir: "/tmp/reportes"
-    report_file: "citrix_no_registradas.txt"
-
   tasks:
 
     - name: Obtener máquinas Citrix sin registrar
@@ -25,17 +21,7 @@
         }
       register: citrix_output
 
-    - name: Crear directorio temporal en AWX
-      delegate_to: localhost
-      run_once: true
-      file:
-        path: "{{ report_tmp_dir }}"
-        state: directory
-        mode: '0755'
-
-    - name: Guardar reporte temporal
-      delegate_to: localhost
-      run_once: true
-      copy:
-        content: "{{ citrix_output.stdout }}"
-        dest: "{{ report_tmp_dir }}/{{ report_file }}"
+    - name: Guardar reporte en variable para workflow
+      set_fact:
+        citrix_reporte: "{{ citrix_output.stdout }}"
+      # Marcar en AWX: Output Variable -> citrix_reporte
