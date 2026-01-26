@@ -1,7 +1,4 @@
 ---
-###############################################################################
-# PLAY 1 - Construir grupo dinámico con VMs Unregistered
-###############################################################################
 - name: Preparar hosts Citrix Unregistered
   hosts: localhost
   gather_facts: no
@@ -12,13 +9,13 @@
       debug:
         var: citrix_restarted
 
-    - name: Normalizar nombres de host (DOMINIO\\HOST → HOST)
+    - name: Normalizar nombres de host (DOMINIO\HOST → HOST)
       set_fact:
         citrix_hosts_limpios: >-
           {{
             citrix_restarted
             | default([])
-            | map('regex_replace', '^.*\\\\', '')
+            | map('regex_replace', '^.*\\\\\\\\', '')
             | list
           }}
 
@@ -33,17 +30,16 @@
       loop: "{{ citrix_hosts_limpios }}"
       when: citrix_hosts_limpios | length > 0
 
-
-###############################################################################
-# PLAY 2 - Reinicio vía WinRM
-###############################################################################
 - name: Reiniciar VMs Citrix Unregistered vía WinRM
   hosts: citrix_unregistered
   gather_facts: no
-  serial: 1               # Reinicio controlado
+  serial: 1
   any_errors_fatal: false
 
   tasks:
+
+    - name: Comprobar conectividad WinRM
+      win_ping:
 
     - name: Reiniciar servidor Windows
       win_reboot:
