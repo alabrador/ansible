@@ -10,6 +10,7 @@
       win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
         $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
+
         if ($unregistered.Count -gt 0) {
           $lines = @()
           foreach ($m in $unregistered) {
@@ -21,7 +22,8 @@
         }
       register: citrix_output
 
-    - name: Guardar reporte en variable para workflow
-      set_fact:
-        citrix_reporte: "{{ citrix_output.stdout }}"
-      # Marcar en AWX: Output Variable -> citrix_reporte
+    - name: Publicar reporte para el workflow
+      set_stats:
+        data:
+          citrix_reporte: "{{ citrix_output.stdout | replace('\r','') | trim }}"
+        per_host: false

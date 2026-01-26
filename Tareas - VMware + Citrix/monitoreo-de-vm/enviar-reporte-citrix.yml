@@ -3,16 +3,13 @@
   hosts: localhost
   gather_facts: no
 
-  vars:
-    citrix_reporte: ""
-
   tasks:
 
-    - name: Obtener fecha y hora actual en España (UTC+1)
+    - name: Obtener fecha y hora en España
       set_fact:
-        current_datetime: "{{ lookup('pipe','TZ=Europe/Madrid date \"+%d-%m-%Y %H:%M:%S\"') }}"
+        current_datetime: "{{ lookup('pipe','TZ=Europe/Madrid date \"+%Y-%m-%d %H:%M:%S\"') }}"
 
-    - name: Preparar texto del mensaje
+    - name: Construir mensaje
       set_fact:
         telegram_message: |
           📊 Reporte Citrix – Máquinas no registradas
