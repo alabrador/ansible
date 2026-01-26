@@ -1,6 +1,6 @@
 ---
 - name: Gestionar VMs Citrix Unregistered (Power ON / Restart)
-  hosts: srv-ddc01
+  hosts: SRV-DDC01
   gather_facts: no
   become: false
 
