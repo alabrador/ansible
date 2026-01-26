@@ -27,9 +27,3 @@
     - name: Debug - mostrar contenido generado
       debug:
         msg: "{{ unregistered_machines.stdout }}"
-
-    - name: Guardar artifact para workflow
-      copy:
-        content: "{{ unregistered_machines.stdout | default('ALL_REGISTERED') }}"
-        dest: "/tmp/unregistered_machines.txt"
-      delegate_to: localhost
