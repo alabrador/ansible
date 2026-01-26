@@ -1,7 +1,3 @@
----
-###############################################################################
-# PLAY 1 - Preparar hosts Citrix Unregistered
-###############################################################################
 - name: Preparar hosts Citrix Unregistered
   hosts: localhost
   gather_facts: no
@@ -16,44 +12,26 @@
       set_fact:
         citrix_hosts_limpios: >-
           {{
-            citrix_restarted
-            | default([])
-            | map('regex_replace', '^.*\\\\\\\\', '')  # elimina "DOMINIO\"
+            (citrix_restarted | default([])) 
+            | map('regex_replace', '^.*\\\\\\\\', '') 
             | list
           }}
+      when: citrix_restarted | length > 0
+
+    - name: No hay VMs para reiniciar
+      debug:
+        msg: "No se encontraron VMs Unregistered para reiniciar"
+      when: citrix_restarted | length == 0
 
     - name: Mostrar hosts finales a reiniciar
       debug:
         var: citrix_hosts_limpios
+      when: citrix_restarted | length > 0
 
     - name: Añadir VMs Unregistered al grupo dinámico
       add_host:
         name: "{{ item }}"
         groups: citrix_unregistered
-        ansible_host: "{{ item | lower }}.alter.es"  # FQDN real para WinRM
+        ansible_host: "{{ item | lower }}.alter.es"
       loop: "{{ citrix_hosts_limpios }}"
-      when: citrix_hosts_limpios | length > 0
-
-###############################################################################
-# PLAY 2 - Reinicio vía WinRM
-###############################################################################
-- name: Reiniciar VMs Citrix Unregistered vía WinRM
-  hosts: citrix_unregistered
-  gather_facts: no
-  serial: 1
-  any_errors_fatal: false
-
-  tasks:
-
-    - name: Comprobar conectividad WinRM
-      win_ping:
-
-    - name: Reiniciar servidor Windows
-      win_reboot:
-        msg: "Reinicio automático por VM Citrix Unregistered"
-        reboot_timeout: 900
-        post_reboot_delay: 60
-
-    - name: Esperar a que WinRM vuelva a estar disponible
-      wait_for_connection:
-        timeout: 600
+      when: citrix_restarted | length > 0
