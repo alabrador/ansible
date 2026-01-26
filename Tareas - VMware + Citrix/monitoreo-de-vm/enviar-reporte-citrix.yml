@@ -10,7 +10,7 @@
 
     - name: Obtener fecha y hora actual en España (UTC+1)
       set_fact:
-        current_datetime: "{{ lookup('pipe','TZ=Europe/Madrid date \"+%Y-%m-%d %H:%M:%S\"') }}"
+        current_datetime: "{{ lookup('pipe','TZ=Europe/Madrid date \"+%d-%m-%Y %H:%M:%S\"') }}"
 
     - name: Preparar texto del mensaje
       set_fact:
