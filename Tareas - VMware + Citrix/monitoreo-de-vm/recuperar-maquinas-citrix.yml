@@ -1,4 +1,7 @@
 ---
+###############################################################################
+# PLAY 1 - Preparar hosts Citrix Unregistered
+###############################################################################
 - name: Preparar hosts Citrix Unregistered
   hosts: localhost
   gather_facts: no
@@ -9,13 +12,13 @@
       debug:
         var: citrix_restarted
 
-    - name: Normalizar nombres de host (DOMINIO\HOST → HOST)
+    - name: Limpiar nombres de host (quitar dominio)
       set_fact:
         citrix_hosts_limpios: >-
           {{
             citrix_restarted
             | default([])
-            | map('regex_replace', '^.*\\\\\\\\', '')
+            | map('regex_replace', '^.*\\\\\\\\', '')  # elimina "DOMINIO\"
             | list
           }}
 
@@ -27,9 +30,13 @@
       add_host:
         name: "{{ item }}"
         groups: citrix_unregistered
+        ansible_host: "{{ item | lower }}.alter.es"  # FQDN real para WinRM
       loop: "{{ citrix_hosts_limpios }}"
       when: citrix_hosts_limpios | length > 0
 
+###############################################################################
+# PLAY 2 - Reinicio vía WinRM
+###############################################################################
 - name: Reiniciar VMs Citrix Unregistered vía WinRM
   hosts: citrix_unregistered
   gather_facts: no
