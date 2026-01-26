@@ -2,7 +2,7 @@
 - name: Generar reporte Citrix no registradas
   hosts: srv-ddc01
   gather_facts: no
-  become: false
+  become: true
 
   tasks:
 
