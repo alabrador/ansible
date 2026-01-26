@@ -1,8 +1,12 @@
 ---
-- name: Generar reporte Citrix no registradas
+- name: Generar reporte Citrix no registradas y enviar por Telegram
   hosts: srv-ddc01
   gather_facts: no
-  become: true
+  become: false
+
+  vars:
+    report_tmp_dir: "/tmp/reportes"
+    report_file: "citrix_no_registradas.txt"
 
   tasks:
 
@@ -14,23 +18,35 @@
         if ($unregistered.Count -gt 0) {
             $lines = @()
             foreach ($m in $unregistered) {
-                $lines += "🖥 Name: $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState)"
+                $lines += "🖥 $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState)"
             }
             $lines -join "`n"
         } else {
-            "ALL_REGISTERED"
+            "✅ Todas las máquinas están registradas"
         }
-      register: unregistered_machines
-      changed_when: false
+      register: citrix_output
 
-    - name: Guardar reporte en Windows
-      win_copy:
-        content: "{{ unregistered_machines.stdout }}"
-        dest: C:\Temp\citrix_unregistered.txt
+    - name: Crear directorio temporal en AWX
+      delegate_to: localhost
+      file:
+        path: "{{ report_tmp_dir }}"
+        state: directory
+        mode: '0755'
 
-    - name: Copiar reporte desde Windows a Linux
-      fetch:
-        src: C:\Temp\citrix_unregistered.txt
-        dest: /opt/reportes/citrix_unregistered_{{ inventory_hostname }}.txt
-        flat: yes
+    - name: Crear archivo de reporte en AWX
+      delegate_to: localhost
+      copy:
+        content: "{{ citrix_output.stdout }}"
+        dest: "{{ report_tmp_dir }}/{{ report_file }}"
 
+    - name: Enviar reporte por Telegram
+      delegate_to: localhost
+      community.general.telegram:
+        token: "{{ telegram_bot_token }}"
+        chat_id: "{{ telegram_chat_id }}"
+        message: |
+          📊 *Reporte Citrix – Máquinas no registradas*
+          🕒 {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+
+          {{ citrix_output.stdout }}
+        parse_mode: markdown
