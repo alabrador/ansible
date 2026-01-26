@@ -1,28 +1,55 @@
 ---
-- name: Enviar reporte Citrix por Telegram
-  hosts: localhost
+- name: Generar reporte Citrix no registradas y enviar por Telegram
+  hosts: srv-ddc01
   gather_facts: no
-  connection: local
+  become: false
 
   vars:
-    tmp_artifact_file: "/tmp/unregistered_machines.txt"
+    report_tmp_dir: "/tmp/reportes"
+    report_file: "citrix_no_registradas.txt"
 
   tasks:
 
-    - name: Leer artifact generado por Job 1
-      slurp:
-        src: "{{ tmp_artifact_file }}"
-      register: reporte_tmp
+    - name: Obtener máquinas Citrix sin registrar
+      win_shell: |
+        Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
+        $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
 
-    - name: Convertir contenido de base64 a texto
+        if ($unregistered.Count -gt 0) {
+            $lines = @()
+            foreach ($m in $unregistered) {
+                $lines += "🖥 $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState)"
+            }
+            $lines -join "`n"
+        } else {
+            "✅ Todas las máquinas están registradas"
+        }
+      register: citrix_output
+
+    - name: Crear directorio temporal en AWX
+      delegate_to: localhost
+      file:
+        path: "{{ report_tmp_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Crear archivo de reporte en AWX
+      delegate_to: localhost
+      copy:
+        content: "{{ citrix_output.stdout }}"
+        dest: "{{ report_tmp_dir }}/{{ report_file }}"
+
+    - name: Preparar texto del reporte para Telegram
+      delegate_to: localhost
       set_fact:
-        reporte_texto: "{{ reporte_tmp.content | b64decode }}"
+        reporte_texto: |
+          📊 Reporte Citrix – Máquinas no registradas
+          🕒 {{ ansible_date_time.date }} {{ ansible_date_time.time }}
 
-    - name: Debug - revisar contenido que se enviará
-      debug:
-        msg: "{{ reporte_texto }}"
+          {{ citrix_output.stdout }}
 
     - name: Enviar mensaje por Telegram
+      delegate_to: localhost
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
