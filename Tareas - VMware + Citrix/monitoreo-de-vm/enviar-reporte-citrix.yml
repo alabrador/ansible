@@ -18,47 +18,34 @@
         citrix_restarted: "{{ citrix_restarted | default([]) }}"
         citrix_skipped: "{{ citrix_skipped | default([]) }}"
 
-    - name: Construir bloque Encendidas
+    - name: Determinar si hay VMs que reportar
       set_fact:
-        block_powered_on: |
-          🔌 Máquinas encendidas ({{ citrix_powered_on | length }}):
-          {% if citrix_powered_on | length > 0 %}
-          {{ citrix_powered_on | join('\n') }}
-          {% else %}
-          — Ninguna —
-          {% endif %}
+        tiene_reporte: "{{ (citrix_powered_on | length > 0) or (citrix_restarted | length > 0) or (citrix_skipped | length > 0) }}"
 
-    - name: Construir bloque Reiniciadas
+    - name: Construir mensaje de VMs no registradas o apagadas
       set_fact:
-        block_restarted: |
-          🔁 Máquinas reiniciadas ({{ citrix_restarted | length }}):
-          {% if citrix_restarted | length > 0 %}
-          {{ citrix_restarted | join('\n') }}
+        telegram_message: >-
+          {% if not tiene_reporte %}
+          ✅ Todas las máquinas están registradas
           {% else %}
-          — Ninguna —
-          {% endif %}
-
-    - name: Construir bloque Omitidas
-      set_fact:
-        block_skipped: |
-          ⚠️ Máquinas omitidas ({{ citrix_skipped | length }}):
-          {% if citrix_skipped | length > 0 %}
-          {{ citrix_skipped | join('\n') }}
-          {% else %}
-          — Ninguna —
-          {% endif %}
-
-    - name: Construir mensaje final
-      set_fact:
-        telegram_message: |
-          📊 Reporte Citrix – Máquinas no registradas
+          📊 Reporte Citrix – Máquinas no registradas o apagadas
           🕒 {{ current_datetime }}
 
-          {{ block_powered_on }}
+          {% if citrix_powered_on | length > 0 %}
+          🔌 Máquinas encendidas ({{ citrix_powered_on | length }}):
+          {{ citrix_powered_on | join('\n') }}
+          {% endif %}
 
-          {{ block_restarted }}
+          {% if citrix_restarted | length > 0 %}
+          🔁 Máquinas reiniciadas ({{ citrix_restarted | length }}):
+          {{ citrix_restarted | join('\n') }}
+          {% endif %}
 
-          {{ block_skipped }}
+          {% if citrix_skipped | length > 0 %}
+          ⚠️ Máquinas omitidas ({{ citrix_skipped | length }}):
+          {{ citrix_skipped | join('\n') }}
+          {% endif %}
+          {% endif %}
 
     - name: Enviar mensaje por Telegram
       uri:
@@ -69,4 +56,5 @@
           chat_id: "{{ telegram_chat_id }}"
           text: "{{ telegram_message }}"
         status_code: 200
+
 
