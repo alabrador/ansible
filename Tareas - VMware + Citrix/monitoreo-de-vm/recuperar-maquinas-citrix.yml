@@ -1,25 +1,46 @@
 ---
-- name: Reiniciar VMs Citrix Unregistered vía WinRM
+###############################################################################
+# PLAY 1 - Construir grupo dinámico con VMs Unregistered
+###############################################################################
+- name: Preparar hosts Citrix Unregistered
   hosts: localhost
   gather_facts: no
 
   tasks:
 
-    - name: Verificar si hay VMs Unregistered
+    - name: Ver variable recibida desde el workflow
       debug:
-        msg: "VMs a reiniciar: {{ citrix_on_unregistered }}"
-      when: citrix_on_unregistered is defined
+        var: citrix_restarted
+
+    - name: Normalizar nombres de host (DOMINIO\\HOST → HOST)
+      set_fact:
+        citrix_hosts_limpios: >-
+          {{
+            citrix_restarted
+            | default([])
+            | map('regex_replace', '^.*\\\\', '')
+            | list
+          }}
+
+    - name: Mostrar hosts finales a reiniciar
+      debug:
+        var: citrix_hosts_limpios
 
     - name: Añadir VMs Unregistered al grupo dinámico
       add_host:
         name: "{{ item }}"
         groups: citrix_unregistered
-      loop: "{{ citrix_on_unregistered | default([]) }}"
+      loop: "{{ citrix_hosts_limpios }}"
+      when: citrix_hosts_limpios | length > 0
 
+
+###############################################################################
+# PLAY 2 - Reinicio vía WinRM
+###############################################################################
 - name: Reiniciar VMs Citrix Unregistered vía WinRM
   hosts: citrix_unregistered
   gather_facts: no
-  serial: 1
+  serial: 1               # Reinicio controlado
   any_errors_fatal: false
 
   tasks:
@@ -29,10 +50,10 @@
 
     - name: Reiniciar servidor Windows
       win_reboot:
-        reboot_timeout: 900
         msg: "Reinicio automático por VM Citrix Unregistered"
+        reboot_timeout: 900
         post_reboot_delay: 60
 
-    - name: Esperar a que vuelva WinRM
+    - name: Esperar a que WinRM vuelva a estar disponible
       wait_for_connection:
         timeout: 600
