@@ -1,17 +1,20 @@
 ---
 - name: Enviar reporte Citrix por Telegram
   hosts: localhost
-  gather_facts: no  # No necesitamos recopilar facts
+  gather_facts: no
 
   vars:
-    # Variable recibida desde Job 1 vía Workflow
     citrix_reporte: ""
 
   tasks:
 
-    - name: Obtener fecha y hora actual del sistema Linux
+    - name: Obtener fecha y hora actual en UTC
       set_fact:
-        current_datetime: "{{ lookup('pipe','date -u \"+%Y-%m-%d %H:%M:%S\"') | to_datetime('%Y-%m-%d %H:%M:%S') | community.general.to_datetime_string('%Y-%m-%d %H:%M:%S', tz='Europe/Madrid') }}"
+        current_utc: "{{ lookup('pipe','date -u \"+%Y-%m-%d %H:%M:%S\"') }}"
+
+    - name: Ajustar hora a UTC+1 (España)
+      set_fact:
+        current_datetime: "{{ (current_utc | to_datetime('%Y-%m-%d %H:%M:%S') + timedelta(hours=1)) | strftime('%Y-%m-%d %H:%M:%S') }}"
 
     - name: Preparar texto del mensaje
       set_fact:
