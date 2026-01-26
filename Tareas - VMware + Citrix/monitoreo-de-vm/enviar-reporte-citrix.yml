@@ -3,19 +3,62 @@
   hosts: localhost
   gather_facts: no
 
+  vars:
+    tz: "Europe/Madrid"
+
   tasks:
 
-    - name: Obtener fecha y hora en España
+    - name: Obtener fecha y hora (España - Linux estándar)
       set_fact:
-        current_datetime: "{{ lookup('pipe','TZ=Europe/Madrid date \"+%Y-%m-%d %H:%M:%S\"') }}"
+        current_datetime: "{{ lookup('pipe', 'TZ=' ~ tz ~ ' date +\"%d-%m-%Y %H:%M:%S\"') }}"
 
-    - name: Construir mensaje
+    - name: Normalizar variables (por seguridad)
+      set_fact:
+        citrix_powered_on: "{{ citrix_powered_on | default([]) }}"
+        citrix_restarted: "{{ citrix_restarted | default([]) }}"
+        citrix_skipped: "{{ citrix_skipped | default([]) }}"
+
+    - name: Construir bloque Encendidas
+      set_fact:
+        block_powered_on: |
+          🔌 Máquinas encendidas ({{ citrix_powered_on | length }}):
+          {% if citrix_powered_on | length > 0 %}
+          {{ citrix_powered_on | join('\n') }}
+          {% else %}
+          — Ninguna —
+          {% endif %}
+
+    - name: Construir bloque Reiniciadas
+      set_fact:
+        block_restarted: |
+          🔁 Máquinas reiniciadas ({{ citrix_restarted | length }}):
+          {% if citrix_restarted | length > 0 %}
+          {{ citrix_restarted | join('\n') }}
+          {% else %}
+          — Ninguna —
+          {% endif %}
+
+    - name: Construir bloque Omitidas
+      set_fact:
+        block_skipped: |
+          ⚠️ Máquinas omitidas ({{ citrix_skipped | length }}):
+          {% if citrix_skipped | length > 0 %}
+          {{ citrix_skipped | join('\n') }}
+          {% else %}
+          — Ninguna —
+          {% endif %}
+
+    - name: Construir mensaje final
       set_fact:
         telegram_message: |
           📊 Reporte Citrix – Máquinas no registradas
           🕒 {{ current_datetime }}
 
-          {{ citrix_reporte }}
+          {{ block_powered_on }}
+
+          {{ block_restarted }}
+
+          {{ block_skipped }}
 
     - name: Enviar mensaje por Telegram
       uri:
@@ -26,3 +69,4 @@
           chat_id: "{{ telegram_chat_id }}"
           text: "{{ telegram_message }}"
         status_code: 200
+

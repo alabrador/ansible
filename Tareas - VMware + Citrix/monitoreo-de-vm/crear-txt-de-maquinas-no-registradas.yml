@@ -1,29 +1,56 @@
 ---
-- name: Obtener máquinas Citrix no registradas (Windows)
+- name: Gestionar VMs Citrix Unregistered (Power ON / Restart)
   hosts: srv-ddc01
   gather_facts: no
   become: false
 
   tasks:
 
-    - name: Obtener máquinas Citrix sin registrar
+    - name: Obtener máquinas Citrix no registradas
       win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
-        $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
 
-        if ($unregistered.Count -gt 0) {
-          $lines = @()
-          foreach ($m in $unregistered) {
-            $lines += "🖥 $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState)"
-          }
-          $lines -join "`n"
-        } else {
-          "✅ Todas las máquinas están registradas"
+        $machines = Get-BrokerMachine -RegistrationState Unregistered |
+          Select-Object MachineName, PowerState
+
+        $result = @{
+          powered_on = @()
+          restarted  = @()
+          skipped    = @()
         }
-      register: citrix_output
 
-    - name: Publicar reporte para el workflow
+        foreach ($m in $machines) {
+
+          if ($m.PowerState -eq "Off") {
+            Start-BrokerMachine -MachineName $m.MachineName
+            $result.powered_on += $m.MachineName
+          }
+          elseif ($m.PowerState -eq "On") {
+            Restart-BrokerMachine -MachineName $m.MachineName -Force
+            $result.restarted += $m.MachineName
+          }
+          else {
+            $result.skipped += "$($m.MachineName) ($($m.PowerState))"
+          }
+        }
+
+        $result | ConvertTo-Json -Depth 3
+      register: citrix_actions
+
+    - name: Convertir resultado a variable Ansible
+      set_fact:
+        citrix_result: "{{ citrix_actions.stdout | from_json }}"
+
+    - name: Mostrar resumen
+      debug:
+        msg:
+          - "🟢 Encendidas: {{ citrix_result.powered_on | length }}"
+          - "🔁 Reiniciadas: {{ citrix_result.restarted | length }}"
+          - "⚠️ Omitidas: {{ citrix_result.skipped | length }}"
+
+    - name: Exportar resultado para AWX Workflow
       set_stats:
         data:
-          citrix_reporte: "{{ citrix_output.stdout | replace('\r','') | trim }}"
-        per_host: false
+          citrix_powered_on: "{{ citrix_result.powered_on }}"
+          citrix_restarted: "{{ citrix_result.restarted }}"
+          citrix_skipped: "{{ citrix_result.skipped }}"
