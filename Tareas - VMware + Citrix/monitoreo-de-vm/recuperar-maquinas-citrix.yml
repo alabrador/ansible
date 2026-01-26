@@ -45,9 +45,6 @@
 
   tasks:
 
-    - name: Comprobar conectividad WinRM
-      win_ping:
-
     - name: Reiniciar servidor Windows
       win_reboot:
         msg: "Reinicio automático por VM Citrix Unregistered"
