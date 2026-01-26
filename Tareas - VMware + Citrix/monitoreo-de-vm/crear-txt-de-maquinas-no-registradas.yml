@@ -39,14 +39,22 @@
         content: "{{ citrix_output.stdout }}"
         dest: "{{ report_tmp_dir }}/{{ report_file }}"
 
-    - name: Enviar reporte por Telegram
+    - name: Preparar texto del reporte para Telegram
       delegate_to: localhost
-      community.general.telegram:
-        token: "{{ telegram_bot_token }}"
-        chat_id: "{{ telegram_chat_id }}"
-        message: |
-          📊 *Reporte Citrix – Máquinas no registradas*
+      set_fact:
+        reporte_texto: |
+          📊 Reporte Citrix – Máquinas no registradas
           🕒 {{ ansible_date_time.date }} {{ ansible_date_time.time }}
 
           {{ citrix_output.stdout }}
-        parse_mode: markdown
+
+    - name: Enviar mensaje por Telegram
+      delegate_to: localhost
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: "{{ reporte_texto }}"
+        status_code: 200
