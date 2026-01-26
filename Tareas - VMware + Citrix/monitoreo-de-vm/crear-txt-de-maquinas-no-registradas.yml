@@ -10,6 +10,9 @@
 
   tasks:
 
+    # -------------------------------------------------
+    # 1️⃣ ESTO SE EJECUTA EN WINDOWS (srv-ddc01)
+    # -------------------------------------------------
     - name: Obtener máquinas Citrix sin registrar
       win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
@@ -26,8 +29,12 @@
         }
       register: citrix_output
 
+    # -------------------------------------------------
+    # 2️⃣ DESDE AQUÍ TODO ES LINUX (AWX POD)
+    # -------------------------------------------------
     - name: Crear directorio temporal en AWX
       delegate_to: localhost
+      run_once: true
       file:
         path: "{{ report_tmp_dir }}"
         state: directory
@@ -35,12 +42,14 @@
 
     - name: Crear archivo de reporte en AWX
       delegate_to: localhost
+      run_once: true
       copy:
         content: "{{ citrix_output.stdout }}"
         dest: "{{ report_tmp_dir }}/{{ report_file }}"
 
-    - name: Preparar texto del reporte para Telegram
+    - name: Preparar texto del reporte
       delegate_to: localhost
+      run_once: true
       set_fact:
         reporte_texto: |
           📊 Reporte Citrix – Máquinas no registradas
@@ -50,6 +59,7 @@
 
     - name: Enviar mensaje por Telegram
       delegate_to: localhost
+      run_once: true
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
