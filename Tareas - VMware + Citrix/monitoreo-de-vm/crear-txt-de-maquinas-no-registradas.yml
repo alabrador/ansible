@@ -14,8 +14,7 @@
         if ($unregistered.Count -gt 0) {
             $lines = @()
             foreach ($m in $unregistered) {
-                $ip = if ($m.IPAddress) { $m.IPAddress } else { "-" }
-                $lines += "🖥 Name: $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState) | IP: $ip"
+                $lines += "🖥 Name: $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState)"
             }
             $lines -join "`n"
         } else {
@@ -24,6 +23,14 @@
       register: unregistered_machines
       changed_when: false
 
-    - name: Debug - mostrar contenido generado
-      debug:
-        msg: "{{ unregistered_machines.stdout }}"
+    - name: Guardar reporte en Windows
+      win_copy:
+        content: "{{ unregistered_machines.stdout }}"
+        dest: C:\Temp\citrix_unregistered.txt
+
+    - name: Copiar reporte desde Windows a Linux
+      fetch:
+        src: C:\Temp\citrix_unregistered.txt
+        dest: /opt/reportes/citrix_unregistered_{{ inventory_hostname }}.txt
+        flat: yes
+
