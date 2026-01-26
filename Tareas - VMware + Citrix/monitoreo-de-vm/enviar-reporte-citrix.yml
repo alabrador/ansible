@@ -8,13 +8,9 @@
 
   tasks:
 
-    - name: Obtener fecha y hora actual en UTC
+    - name: Obtener fecha y hora actual en España (UTC+1)
       set_fact:
-        current_utc: "{{ lookup('pipe','date -u \"+%Y-%m-%d %H:%M:%S\"') }}"
-
-    - name: Ajustar hora a UTC+1 (España)
-      set_fact:
-        current_datetime: "{{ (current_utc | to_datetime('%Y-%m-%d %H:%M:%S') + timedelta(hours=1)) | strftime('%Y-%m-%d %H:%M:%S') }}"
+        current_datetime: "{{ lookup('pipe','TZ=Europe/Madrid date \"+%Y-%m-%d %H:%M:%S\"') }}"
 
     - name: Preparar texto del mensaje
       set_fact:
