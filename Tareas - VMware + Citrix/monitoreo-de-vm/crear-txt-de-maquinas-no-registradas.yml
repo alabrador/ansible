@@ -1,5 +1,5 @@
 ---
-- name: Generar reporte Citrix no registradas y enviar por Telegram
+- name: Obtener máquinas Citrix no registradas (Windows)
   hosts: srv-ddc01
   gather_facts: no
   become: false
@@ -10,28 +10,21 @@
 
   tasks:
 
-    # -------------------------------------------------
-    # 1️⃣ ESTO SE EJECUTA EN WINDOWS (srv-ddc01)
-    # -------------------------------------------------
     - name: Obtener máquinas Citrix sin registrar
       win_shell: |
         Add-PSSnapin Citrix.Broker.Admin.V2 -ErrorAction SilentlyContinue
         $unregistered = Get-BrokerMachine -RegistrationState Unregistered -ErrorAction SilentlyContinue
-
         if ($unregistered.Count -gt 0) {
-            $lines = @()
-            foreach ($m in $unregistered) {
-                $lines += "🖥 $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState)"
-            }
-            $lines -join "`n"
+          $lines = @()
+          foreach ($m in $unregistered) {
+            $lines += "🖥 $($m.MachineName) | State: $($m.RegistrationState) | Power: $($m.PowerState)"
+          }
+          $lines -join "`n"
         } else {
-            "✅ Todas las máquinas están registradas"
+          "✅ Todas las máquinas están registradas"
         }
       register: citrix_output
 
-    # -------------------------------------------------
-    # 2️⃣ DESDE AQUÍ TODO ES LINUX (AWX POD)
-    # -------------------------------------------------
     - name: Crear directorio temporal en AWX
       delegate_to: localhost
       run_once: true
@@ -40,31 +33,9 @@
         state: directory
         mode: '0755'
 
-    - name: Crear archivo de reporte en AWX
+    - name: Guardar reporte temporal
       delegate_to: localhost
       run_once: true
       copy:
         content: "{{ citrix_output.stdout }}"
         dest: "{{ report_tmp_dir }}/{{ report_file }}"
-
-    - name: Preparar texto del reporte
-      delegate_to: localhost
-      run_once: true
-      set_fact:
-        reporte_texto: |
-          📊 Reporte Citrix – Máquinas no registradas
-          🕒 {{ ansible_date_time.date }} {{ ansible_date_time.time }}
-
-          {{ citrix_output.stdout }}
-
-    - name: Enviar mensaje por Telegram
-      delegate_to: localhost
-      run_once: true
-      uri:
-        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
-        method: POST
-        body_format: json
-        body:
-          chat_id: "{{ telegram_chat_id }}"
-          text: "{{ reporte_texto }}"
-        status_code: 200

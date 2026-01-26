@@ -2,25 +2,25 @@
 - name: Enviar reporte Citrix por Telegram
   hosts: localhost
   gather_facts: no
-  connection: local
 
   vars:
-    tmp_artifact_file: "/tmp/unregistered_machines.txt"
+    report_tmp_dir: "/tmp/reportes"
+    report_file: "citrix_no_registradas.txt"
 
   tasks:
 
-    - name: Leer artifact generado por Job 1
+    - name: Leer reporte temporal
       slurp:
-        src: "{{ tmp_artifact_file }}"
-      register: reporte_tmp
+        src: "{{ report_tmp_dir }}/{{ report_file }}"
+      register: reporte_raw
 
-    - name: Convertir contenido de base64 a texto
+    - name: Convertir reporte a texto
       set_fact:
-        reporte_texto: "{{ reporte_tmp.content | b64decode }}"
+        reporte_texto: |
+          📊 Reporte Citrix – Máquinas no registradas
+          🕒 {{ ansible_date_time.date }} {{ ansible_date_time.time }}
 
-    - name: Debug - revisar contenido que se enviará
-      debug:
-        msg: "{{ reporte_texto }}"
+          {{ reporte_raw.content | b64decode }}
 
     - name: Enviar mensaje por Telegram
       uri:
