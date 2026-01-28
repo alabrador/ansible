@@ -1,28 +1,39 @@
 ---
-- name: Recuperar VMs Citrix desde VMware
+- name: Recuperar VMs Citrix NO registradas desde VMware
   hosts: localhost
   gather_facts: no
 
   vars:
     vcenter_hostname: "vcenter.alter.es"
     vcenter_validate_certs: false
-    datacenter_name: "ALTER-DC"   # ajusta si aplica
+    datacenter_name: "CL_CITRIX"   # Ajusta si aplica
 
-    # Variables heredadas del workflow
+    # Variables heredadas desde set_stats (Citrix playbook)
     citrix_powered_on: "{{ citrix_powered_on | default([]) }}"
     citrix_restarted: "{{ citrix_restarted | default([]) }}"
 
   tasks:
 
-    - name: Unir todas las VMs no registradas
+    - name: Unir todas las VMs no registradas recibidas desde Citrix
       set_fact:
         vms_afectadas: "{{ citrix_powered_on + citrix_restarted }}"
 
-    - name: Mostrar VMs a procesar
-      debug:
-        var: vms_afectadas
+    - name: Filtrar SOLO VMs permitidas (SRV-CTXP101 a SRV-CTXP145)
+      set_fact:
+        vms_validas: >-
+          {{
+            vms_afectadas
+            | select('match', '^SRV-CTXP(10[1-9]|1[1-3][0-9]|14[0-5])$')
+            | list
+          }}
 
-    - name: Encender VMs apagadas en vCenter
+    - name: Mostrar VMs finales que se van a procesar
+      debug:
+        msg:
+          - "VMs apagadas a encender: {{ citrix_powered_on | intersect(vms_validas) }}"
+          - "VMs encendidas a reiniciar: {{ citrix_restarted | intersect(vms_validas) }}"
+
+    - name: Encender VMs apagadas (solo rango permitido)
       community.vmware.vmware_guest_powerstate:
         hostname: "{{ vcenter_hostname }}"
         username: "{{ vcenter_username }}"
@@ -31,10 +42,10 @@
         datacenter: "{{ datacenter_name }}"
         name: "{{ item }}"
         state: powered-on
-      loop: "{{ citrix_powered_on }}"
+      loop: "{{ citrix_powered_on | intersect(vms_validas) }}"
       when: citrix_powered_on | length > 0
 
-    - name: Reinicio forzado de VMs encendidas (reset)
+    - name: Reinicio forzado de VMs encendidas NO registradas (solo rango permitido)
       community.vmware.vmware_guest_powerstate:
         hostname: "{{ vcenter_hostname }}"
         username: "{{ vcenter_username }}"
@@ -43,5 +54,5 @@
         datacenter: "{{ datacenter_name }}"
         name: "{{ item }}"
         state: restarted
-      loop: "{{ citrix_restarted }}"
+      loop: "{{ citrix_restarted | intersect(vms_validas) }}"
       when: citrix_restarted | length > 0
