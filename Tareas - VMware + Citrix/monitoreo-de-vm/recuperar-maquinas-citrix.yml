@@ -6,34 +6,39 @@
   vars:
     vcenter_hostname: "vcenter.alter.es"
     vcenter_validate_certs: false
-    datacenter_name: "CL_CITRIX"   # Ajusta si aplica
+    datacenter_name: "ALTER-DC"   # ajusta si aplica
 
-    # Variables heredadas desde set_stats (Citrix playbook)
+    # Variables heredadas desde el playbook Citrix (set_stats)
     citrix_powered_on: "{{ citrix_powered_on | default([]) }}"
     citrix_restarted: "{{ citrix_restarted | default([]) }}"
 
   tasks:
 
-    - name: Unir todas las VMs no registradas recibidas desde Citrix
+    - name: Unir TODAS las VMs NO registradas (sin filtrar por nombre)
       set_fact:
-        vms_afectadas: "{{ citrix_powered_on + citrix_restarted }}"
+        vms_no_registradas: "{{ citrix_powered_on + citrix_restarted }}"
 
-    - name: Filtrar SOLO VMs permitidas (SRV-CTXP101 a SRV-CTXP145)
+    - name: Definir rango permitido SOLO para encendido
       set_fact:
-        vms_validas: >-
+        vms_rango_encendido: >-
           {{
-            vms_afectadas
+            vms_no_registradas
             | select('match', '^SRV-CTXP(10[1-9]|1[1-3][0-9]|14[0-5])$')
             | list
           }}
 
-    - name: Mostrar VMs finales que se van a procesar
+    - name: Mostrar resumen de decisiones
       debug:
         msg:
-          - "VMs apagadas a encender: {{ citrix_powered_on | intersect(vms_validas) }}"
-          - "VMs encendidas a reiniciar: {{ citrix_restarted | intersect(vms_validas) }}"
+          - "🔌 Se encenderán (apagadas + en rango): {{ citrix_powered_on | intersect(vms_rango_encendido) }}"
+          - "🔁 Se reiniciarán (todas las no registradas encendidas): {{ citrix_restarted }}"
 
-    - name: Encender VMs apagadas (solo rango permitido)
+    #################################################################
+    # ENCENDIDO
+    # Solo VMs apagadas + dentro del rango SRV-CTXP101-145
+    #################################################################
+
+    - name: Encender VMs apagadas dentro del rango permitido
       community.vmware.vmware_guest_powerstate:
         hostname: "{{ vcenter_hostname }}"
         username: "{{ vcenter_username }}"
@@ -42,10 +47,15 @@
         datacenter: "{{ datacenter_name }}"
         name: "{{ item }}"
         state: powered-on
-      loop: "{{ citrix_powered_on | intersect(vms_validas) }}"
+      loop: "{{ citrix_powered_on | intersect(vms_rango_encendido) }}"
       when: citrix_powered_on | length > 0
 
-    - name: Reinicio forzado de VMs encendidas NO registradas (solo rango permitido)
+    #################################################################
+    # REINICIO
+    # TODAS las VMs encendidas NO registradas, sin importar el nombre
+    #################################################################
+
+    - name: Reinicio forzado de TODAS las VMs NO registradas encendidas
       community.vmware.vmware_guest_powerstate:
         hostname: "{{ vcenter_hostname }}"
         username: "{{ vcenter_username }}"
@@ -54,5 +64,5 @@
         datacenter: "{{ datacenter_name }}"
         name: "{{ item }}"
         state: restarted
-      loop: "{{ citrix_restarted | intersect(vms_validas) }}"
+      loop: "{{ citrix_restarted }}"
       when: citrix_restarted | length > 0
