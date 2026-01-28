@@ -7,54 +7,37 @@
   vars:
     vcenter_hostname: "vcenter.alter.es"
     vcenter_validate_certs: false
-    datacenter_name: "ALTER-DC"   # Ajusta según tu entorno
+    datacenter_name: "ALTER-DC"  # Ajusta según tu entorno
 
-    # Variables heredadas desde el playbook Citrix (set_stats)
+    # Variables heredadas desde Job1 (ya limpias)
     citrix_powered_on: "{{ citrix_powered_on | default([]) }}"
     citrix_restarted: "{{ citrix_restarted | default([]) }}"
 
   tasks:
 
     ########################################################
-    # 1️⃣ Normalizar nombres: quitar dominio Citrix
-    ########################################################
-    - name: Normalizar nombres de VM (quitar dominio Citrix)
-      set_fact:
-        citrix_powered_on_clean: >-
-          {{ citrix_powered_on | map('regex_replace', '^.*\\\\', '') | list }}
-        citrix_restarted_clean: >-
-          {{ citrix_restarted | map('regex_replace', '^.*\\\\', '') | list }}
-
-    ########################################################
-    # 2️⃣ Unir todas las VMs NO registradas
-    ########################################################
-    - name: Unir TODAS las VMs NO registradas (sin filtrar por nombre)
-      set_fact:
-        vms_no_registradas: "{{ citrix_powered_on_clean + citrix_restarted_clean }}"
-
-    ########################################################
-    # 3️⃣ Definir rango permitido SOLO para encendido
+    # 1️⃣ Definir rango permitido SOLO para encendido
     ########################################################
     - name: Definir rango permitido SOLO para encendido
       set_fact:
         vms_rango_encendido: >-
           {{
-            citrix_powered_on_clean
+            citrix_powered_on
             | select('match', '^SRV-CTXP(10[1-9]|1[1-3][0-9]|14[0-5])$')
             | list
           }}
 
     ########################################################
-    # 4️⃣ Mostrar resumen de decisiones
+    # 2️⃣ Mostrar resumen de decisiones
     ########################################################
     - name: Mostrar resumen de decisiones
       debug:
         msg:
           - "🔌 Se encenderán (apagadas + en rango): {{ vms_rango_encendido }}"
-          - "🔁 Se reiniciarán (todas las no registradas encendidas): {{ citrix_restarted_clean }}"
+          - "🔁 Se reiniciarán (todas las no registradas encendidas): {{ citrix_restarted }}"
 
     ########################################################
-    # 5️⃣ Encendido (solo rango permitido)
+    # 3️⃣ Encendido (solo rango permitido)
     ########################################################
     - name: Encender VMs apagadas dentro del rango permitido
       community.vmware.vmware_guest_powerstate:
@@ -69,7 +52,7 @@
       when: vms_rango_encendido | length > 0
 
     ########################################################
-    # 6️⃣ Reinicio forzado (todas NO registradas)
+    # 4️⃣ Reinicio forzado (todas NO registradas encendidas)
     ########################################################
     - name: Reinicio forzado de TODAS las VMs NO registradas encendidas
       community.vmware.vmware_guest_powerstate:
@@ -80,5 +63,5 @@
         datacenter: "{{ datacenter_name }}"
         name: "{{ item }}"
         state: restarted
-      loop: "{{ citrix_restarted_clean }}"
-      when: citrix_restarted_clean | length > 0
+      loop: "{{ citrix_restarted }}"
+      when: citrix_restarted | length > 0

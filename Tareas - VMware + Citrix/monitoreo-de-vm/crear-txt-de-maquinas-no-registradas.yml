@@ -40,16 +40,25 @@
       set_fact:
         citrix_result: "{{ citrix_actions.stdout | from_json }}"
 
+    - name: Limpiar nombres de dominio de las VMs
+      set_fact:
+        citrix_powered_on: >-
+          {{ citrix_result.powered_on | map('regex_replace', '^.*\\\\', '') | list }}
+        citrix_restarted: >-
+          {{ citrix_result.restarted | map('regex_replace', '^.*\\\\', '') | list }}
+        citrix_skipped: >-
+          {{ citrix_result.skipped | map('regex_replace', '^.*\\\\', '') | list }}
+
     - name: Mostrar resumen
       debug:
         msg:
-          - "🟢 Encendidas: {{ citrix_result.powered_on | length }}"
-          - "🔁 Reiniciadas: {{ citrix_result.restarted | length }}"
-          - "⚠️ Omitidas: {{ citrix_result.skipped | length }}"
+          - "🟢 Encendidas: {{ citrix_powered_on | length }}"
+          - "🔁 Reiniciadas: {{ citrix_restarted | length }}"
+          - "⚠️ Omitidas: {{ citrix_skipped | length }}"
 
     - name: Exportar resultado para AWX Workflow
       set_stats:
         data:
-          citrix_powered_on: "{{ citrix_result.powered_on }}"
-          citrix_restarted: "{{ citrix_result.restarted }}"
-          citrix_skipped: "{{ citrix_result.skipped }}"
+          citrix_powered_on: "{{ citrix_powered_on }}"
+          citrix_restarted: "{{ citrix_restarted }}"
+          citrix_skipped: "{{ citrix_skipped }}"
