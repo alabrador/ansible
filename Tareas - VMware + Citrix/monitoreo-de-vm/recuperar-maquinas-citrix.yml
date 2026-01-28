@@ -7,7 +7,7 @@
   vars:
     vcenter_hostname: "vcenter.alter.es"
     vcenter_validate_certs: false
-    datacenter_name: "ALTER-DC"  # Ajusta según tu entorno
+    datacenter_name: "CL_CITRIX"  # Ajusta según tu entorno
 
     # Variables heredadas desde Job1 (ya limpias)
     citrix_powered_on: "{{ citrix_powered_on | default([]) }}"

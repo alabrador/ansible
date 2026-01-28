@@ -43,11 +43,11 @@
     - name: Limpiar nombres de dominio de las VMs
       set_fact:
         citrix_powered_on: >-
-          {{ citrix_result.powered_on | map('regex_replace', '^.*\\\\', '') | list }}
+          {{ citrix_result.powered_on | map('regex_replace', '^.*\\\\\\\\', '') | list }}
         citrix_restarted: >-
-          {{ citrix_result.restarted | map('regex_replace', '^.*\\\\', '') | list }}
+          {{ citrix_result.restarted | map('regex_replace', '^.*\\\\\\\\', '') | list }}
         citrix_skipped: >-
-          {{ citrix_result.skipped | map('regex_replace', '^.*\\\\', '') | list }}
+          {{ citrix_result.skipped | map('regex_replace', '^.*\\\\\\\\', '') | list }}
 
     - name: Mostrar resumen
       debug:
