@@ -1,37 +1,47 @@
-- name: Preparar hosts Citrix Unregistered
+---
+- name: Recuperar VMs Citrix desde VMware
   hosts: localhost
   gather_facts: no
 
+  vars:
+    vcenter_hostname: "vcenter.alter.es"
+    vcenter_validate_certs: false
+    datacenter_name: "ALTER-DC"   # ajusta si aplica
+
+    # Variables heredadas del workflow
+    citrix_powered_on: "{{ citrix_powered_on | default([]) }}"
+    citrix_restarted: "{{ citrix_restarted | default([]) }}"
+
   tasks:
 
-    - name: Ver variable recibida desde el workflow
-      debug:
-        var: citrix_restarted
-
-    - name: Limpiar nombres de host (quitar dominio)
+    - name: Unir todas las VMs no registradas
       set_fact:
-        citrix_hosts_limpios: >-
-          {{
-            (citrix_restarted | default([])) 
-            | map('regex_replace', '^.*\\\\\\\\', '') 
-            | list
-          }}
-      when: citrix_restarted | length > 0
+        vms_afectadas: "{{ citrix_powered_on + citrix_restarted }}"
 
-    - name: No hay VMs para reiniciar
+    - name: Mostrar VMs a procesar
       debug:
-        msg: "No se encontraron VMs Unregistered para reiniciar"
-      when: citrix_restarted | length == 0
+        var: vms_afectadas
 
-    - name: Mostrar hosts finales a reiniciar
-      debug:
-        var: citrix_hosts_limpios
-      when: citrix_restarted | length > 0
-
-    - name: Añadir VMs Unregistered al grupo dinámico
-      add_host:
+    - name: Encender VMs apagadas en vCenter
+      community.vmware.vmware_guest_powerstate:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        datacenter: "{{ datacenter_name }}"
         name: "{{ item }}"
-        groups: citrix_unregistered
-        ansible_host: "{{ item | lower }}.alter.es"
-      loop: "{{ citrix_hosts_limpios }}"
+        state: powered-on
+      loop: "{{ citrix_powered_on }}"
+      when: citrix_powered_on | length > 0
+
+    - name: Reinicio forzado de VMs encendidas (reset)
+      community.vmware.vmware_guest_powerstate:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ vcenter_validate_certs }}"
+        datacenter: "{{ datacenter_name }}"
+        name: "{{ item }}"
+        state: restarted
+      loop: "{{ citrix_restarted }}"
       when: citrix_restarted | length > 0
