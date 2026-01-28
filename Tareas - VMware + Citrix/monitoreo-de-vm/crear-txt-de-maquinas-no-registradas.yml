@@ -52,6 +52,6 @@
     - name: Mostrar resumen
       debug:
         msg:
-          - "🟢 Encendidas (reportadas para Job2): {{ citrix_result.powered_on | length }}"
-          - "🔁 Encendidas pero no registradas (reportadas para Job2): {{ citrix_result.restarted | length }}"
+          - "🟢 Encendidas: {{ citrix_result.powered_on | length }}"
+          - "🔁 Encendidas pero no registradas: {{ citrix_result.restarted | length }}"
           - "⚠️ Omitidas: {{ citrix_result.skipped | length }}"
