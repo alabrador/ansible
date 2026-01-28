@@ -20,7 +20,6 @@
         }
 
         foreach ($m in $machines) {
-
           if ($m.PowerState -eq "Off") {
             Start-BrokerMachine -MachineName $m.MachineName
             $result.powered_on += $m.MachineName
