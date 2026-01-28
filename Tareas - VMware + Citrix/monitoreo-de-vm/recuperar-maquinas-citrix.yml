@@ -1,12 +1,13 @@
 ---
 - name: Recuperar VMs Citrix NO registradas desde VMware
   hosts: localhost
+  connection: local
   gather_facts: no
 
   vars:
     vcenter_hostname: "vcenter.alter.es"
     vcenter_validate_certs: false
-    datacenter_name: "ALTER-DC"   # ajusta si aplica
+    datacenter_name: "ALTER-DC"   # Ajusta según tu entorno
 
     # Variables heredadas desde el playbook Citrix (set_stats)
     citrix_powered_on: "{{ citrix_powered_on | default([]) }}"
@@ -14,30 +15,47 @@
 
   tasks:
 
+    ########################################################
+    # 1️⃣ Normalizar nombres: quitar dominio Citrix
+    ########################################################
+    - name: Normalizar nombres de VM (quitar dominio Citrix)
+      set_fact:
+        citrix_powered_on_clean: >-
+          {{ citrix_powered_on | map('regex_replace', '^.*\\\\', '') | list }}
+        citrix_restarted_clean: >-
+          {{ citrix_restarted | map('regex_replace', '^.*\\\\', '') | list }}
+
+    ########################################################
+    # 2️⃣ Unir todas las VMs NO registradas
+    ########################################################
     - name: Unir TODAS las VMs NO registradas (sin filtrar por nombre)
       set_fact:
-        vms_no_registradas: "{{ citrix_powered_on + citrix_restarted }}"
+        vms_no_registradas: "{{ citrix_powered_on_clean + citrix_restarted_clean }}"
 
+    ########################################################
+    # 3️⃣ Definir rango permitido SOLO para encendido
+    ########################################################
     - name: Definir rango permitido SOLO para encendido
       set_fact:
         vms_rango_encendido: >-
           {{
-            vms_no_registradas
+            citrix_powered_on_clean
             | select('match', '^SRV-CTXP(10[1-9]|1[1-3][0-9]|14[0-5])$')
             | list
           }}
 
+    ########################################################
+    # 4️⃣ Mostrar resumen de decisiones
+    ########################################################
     - name: Mostrar resumen de decisiones
       debug:
         msg:
-          - "🔌 Se encenderán (apagadas + en rango): {{ citrix_powered_on | intersect(vms_rango_encendido) }}"
-          - "🔁 Se reiniciarán (todas las no registradas encendidas): {{ citrix_restarted }}"
+          - "🔌 Se encenderán (apagadas + en rango): {{ vms_rango_encendido }}"
+          - "🔁 Se reiniciarán (todas las no registradas encendidas): {{ citrix_restarted_clean }}"
 
-    #################################################################
-    # ENCENDIDO
-    # Solo VMs apagadas + dentro del rango SRV-CTXP101-145
-    #################################################################
-
+    ########################################################
+    # 5️⃣ Encendido (solo rango permitido)
+    ########################################################
     - name: Encender VMs apagadas dentro del rango permitido
       community.vmware.vmware_guest_powerstate:
         hostname: "{{ vcenter_hostname }}"
@@ -47,14 +65,12 @@
         datacenter: "{{ datacenter_name }}"
         name: "{{ item }}"
         state: powered-on
-      loop: "{{ citrix_powered_on | intersect(vms_rango_encendido) }}"
-      when: citrix_powered_on | length > 0
+      loop: "{{ vms_rango_encendido }}"
+      when: vms_rango_encendido | length > 0
 
-    #################################################################
-    # REINICIO
-    # TODAS las VMs encendidas NO registradas, sin importar el nombre
-    #################################################################
-
+    ########################################################
+    # 6️⃣ Reinicio forzado (todas NO registradas)
+    ########################################################
     - name: Reinicio forzado de TODAS las VMs NO registradas encendidas
       community.vmware.vmware_guest_powerstate:
         hostname: "{{ vcenter_hostname }}"
@@ -64,5 +80,5 @@
         datacenter: "{{ datacenter_name }}"
         name: "{{ item }}"
         state: restarted
-      loop: "{{ citrix_restarted }}"
-      when: citrix_restarted | length > 0
+      loop: "{{ citrix_restarted_clean }}"
+      when: citrix_restarted_clean | length > 0
