@@ -1,5 +1,5 @@
 ---
-- name: Recuperar VMs Citrix NO registradas desde VMware
+- name: Recuperar VMs Citrix NO registradas desde VMware y ejecutar acciones
   hosts: localhost
   connection: local
   gather_facts: no
@@ -15,9 +15,6 @@
 
   tasks:
 
-    ########################################################
-    # 1️⃣ Definir rango permitido SOLO para encendido
-    ########################################################
     - name: Definir rango permitido SOLO para encendido
       set_fact:
         vms_rango_encendido: >-
@@ -27,18 +24,12 @@
             | list
           }}
 
-    ########################################################
-    # 2️⃣ Mostrar resumen de decisiones
-    ########################################################
     - name: Mostrar resumen de decisiones
       debug:
         msg:
           - "🔌 Se encenderán (apagadas + en rango): {{ vms_rango_encendido }}"
           - "🔁 Se reiniciarán (todas las no registradas encendidas): {{ citrix_restarted }}"
 
-    ########################################################
-    # 3️⃣ Encendido (solo rango permitido)
-    ########################################################
     - name: Encender VMs apagadas dentro del rango permitido
       community.vmware.vmware_guest_powerstate:
         hostname: "{{ vcenter_hostname }}"
@@ -51,9 +42,6 @@
       loop: "{{ vms_rango_encendido }}"
       when: vms_rango_encendido | length > 0
 
-    ########################################################
-    # 4️⃣ Reinicio forzado (todas NO registradas encendidas)
-    ########################################################
     - name: Reinicio forzado de TODAS las VMs NO registradas encendidas
       community.vmware.vmware_guest_powerstate:
         hostname: "{{ vcenter_hostname }}"
