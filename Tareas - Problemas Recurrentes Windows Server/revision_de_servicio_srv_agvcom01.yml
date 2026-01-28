@@ -1,14 +1,14 @@
 ---
-- name: Verificar y reiniciar CheckmkService
+- name: Verificar y reiniciar "Artisteril Tram Service"
   hosts: all
   gather_facts: no
   become: false
 
   tasks:
 
-    - name: Obtener estado del servicio CheckmkService
+    - name: Obtener estado del servicio Artisteril Tram Service
       win_shell: |
-        Get-Service -Name CheckmkService | Select-Object Status | ConvertTo-Json
+        Get-Service -Name "Artisteril Tram Service" | Select-Object Status | ConvertTo-Json
       register: service_raw
 
     - name: Convertir a variable Ansible
@@ -17,11 +17,11 @@
 
     - name: Mostrar estado actual del servicio
       debug:
-        msg: "Estado actual de CheckmkService: {{ service_status }}"
+        msg: "Estado actual de Artisteril Tram Service: {{ service_status }}"
 
     - name: Iniciar el servicio si está detenido
       win_service:
-        name: CheckmkService
+        name: Artisteril Tram Service
         start_mode: auto
         state: started
       when: service_status != 'Running'
@@ -31,7 +31,7 @@
       debug:
         msg: >
           {% if service_status != 'Running' %}
-          Servicio CheckmkService estaba detenido y se ha iniciado correctamente.
+          Servicio Artisteril Tram estaba detenido y se ha iniciado correctamente.
           {% else %}
-          Servicio CheckmkService ya estaba en ejecución, no se hizo nada.
+          Servicio Artisteril Tram ya estaba en ejecución, no se hizo nada.
           {% endif %}
