@@ -1,6 +1,6 @@
 ---
 - name: Mantenimiento WordPress Producción
-  hosts: srv-cpweb02
+  hosts: srv-cpweb01
   become: yes
   gather_facts: yes
 
