@@ -1,0 +1,53 @@
+---
+- name: Verificar servicio y conexiones puerto 10000
+  hosts: SRV-AGVTCM01
+  gather_facts: no
+
+  tasks:
+
+    - name: Obtener estado del servicio
+      win_shell: |
+        Get-Service -Name "Artisteril Tram Service" |
+        Select-Object Status | ConvertTo-Json
+      register: service_raw
+
+    - name: Guardar estado del servicio
+      set_fact:
+        service_status: "{{ (service_raw.stdout | from_json).Status }}"
+
+    - name: Obtener conexiones al puerto 10000
+      win_shell: |
+        NETSTAT.EXE -ano | findstr :10000
+      register: port_check
+      failed_when: false
+      changed_when: false
+
+    - name: Normalizar resultado del puerto
+      set_fact:
+        port_10000_connections: >-
+          {{ port_check.stdout_lines | default([]) }}
+
+    - name: Decidir acción
+      set_fact:
+        action_decision: >-
+          {% if port_10000_connections | length > 0 %}
+          SKIP
+          {% elif service_status != 'Running' %}
+          START_SERVICE
+          {% else %}
+          OK
+          {% endif %}
+
+    - name: Iniciar servicio SOLO si no hay conexiones
+      win_service:
+        name: Artisteril Tram Service
+        state: started
+        start_mode: auto
+      when: action_decision == 'START_SERVICE'
+
+    - name: Exportar datos para el workflow (Job 2)
+      set_stats:
+        data:
+          telegram_action: "{{ action_decision }}"
+          telegram_service_status: "{{ service_status }}"
+          telegram_port_connections: "{{ port_10000_connections }}"

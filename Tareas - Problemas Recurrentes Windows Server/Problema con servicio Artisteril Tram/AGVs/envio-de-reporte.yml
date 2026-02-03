@@ -1,0 +1,32 @@
+---
+- name: Enviar notificación Telegram
+  hosts: localhost
+  gather_facts: no
+
+  tasks:
+
+    - name: Construir mensaje Telegram
+      set_fact:
+        telegram_message: |
+          🖥️ Servidor: SRV-AGVTCM01
+          🔧 Servicio: Artisteril Tram Service
+          📌 Estado: {{ telegram_service_status }}
+          ⚙️ Acción: {{ telegram_action }}
+
+          {% if telegram_port_connections | length > 0 %}
+          🔴 Conexiones activas en puerto 10000:
+          {% for line in telegram_port_connections %}
+          {{ line }}
+          {% endfor %}
+          {% else %}
+          🟢 No hay conexiones activas en el puerto 10000
+          {% endif %}
+
+    - name: Enviar mensaje a Telegram
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: "{{ telegram_message }}"
