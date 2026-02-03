@@ -5,7 +5,7 @@
   become: false
 
   vars:
-    telegram_api_url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+    telegram_api_url: "https://api.telegram.org/bot{{ telegram_token }}/sendMessage"
 
   tasks:
 
@@ -53,7 +53,7 @@
         method: POST
         body_format: json
         body:
-          chat_id: "{{ telegram_chat_id }}"
+          chat_id: "{{ telegram_id }}"
           text: |
             ⚠️ Artisteril Tram Service
             🖥️ Servidor: {{ inventory_hostname }}
