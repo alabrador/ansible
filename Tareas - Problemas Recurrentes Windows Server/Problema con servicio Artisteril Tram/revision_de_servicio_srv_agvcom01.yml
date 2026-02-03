@@ -1,6 +1,6 @@
 ---
 - name: Verificar y reiniciar "Artisteril Tram Service"
-  hosts: SRV-AGVCM01
+  hosts: SRV-AGVCTM01
   gather_facts: no
   become: false
 
