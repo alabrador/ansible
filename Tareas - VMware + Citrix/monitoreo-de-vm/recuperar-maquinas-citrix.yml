@@ -1,6 +1,6 @@
 ---
 - name: Recuperar VMs Citrix NO registradas desde VMware y ejecutar acciones
-  hosts: localhost
+  hosts: localhostdd
   connection: local
   gather_facts: no
 
