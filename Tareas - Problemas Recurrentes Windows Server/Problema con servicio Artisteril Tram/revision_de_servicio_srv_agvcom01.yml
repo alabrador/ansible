@@ -1,11 +1,17 @@
 ---
-- name: Verificar y reiniciar "Artisteril Tram Service"
+- name: Verificar servicio Artisteril Tram y conexiones puerto 10000
   hosts: SRV-AGVTCM01
   gather_facts: no
   become: false
 
+  vars:
+    telegram_api_url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+
   tasks:
 
+    ############################################################
+    # 1️⃣ Estado del servicio
+    ############################################################
     - name: Obtener estado del servicio Artisteril Tram Service
       win_shell: |
         Get-Service -Name "Artisteril Tram Service" | Select-Object Status | ConvertTo-Json
@@ -15,23 +21,73 @@
       set_fact:
         service_status: "{{ (service_raw.stdout | from_json).Status }}"
 
-    - name: Mostrar estado actual del servicio
-      debug:
-        msg: "Estado actual de Artisteril Tram Service: {{ service_status }}"
+    ############################################################
+    # 2️⃣ Verificar conexiones al puerto 10000
+    ############################################################
+    - name: Verificar conexiones activas al puerto 10000
+      win_shell: |
+        NETSTAT.EXE -ano | findstr :10000
+      register: netstat_10000
+      failed_when: false
+      changed_when: false
 
-    - name: Iniciar el servicio si está detenido
+    - name: Determinar si hay conexiones al puerto 10000
+      set_fact:
+        hay_conexiones_10000: "{{ netstat_10000.stdout | length > 0 }}"
+
+    ############################################################
+    # 3️⃣ Mostrar resumen
+    ############################################################
+    - name: Mostrar resumen de validaciones
+      debug:
+        msg:
+          - "Estado servicio: {{ service_status }}"
+          - "¿Hay conexiones puerto 10000?: {{ hay_conexiones_10000 }}"
+
+    ############################################################
+    # 4️⃣ Enviar aviso por Telegram si hay conexiones
+    ############################################################
+    - name: Enviar aviso por Telegram (conexiones activas)
+      uri:
+        url: "{{ telegram_api_url }}"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: |
+            ⚠️ Artisteril Tram Service
+            🖥️ Servidor: {{ inventory_hostname }}
+
+            ❌ NO se realizó ninguna acción
+            🔌 Conexiones activas detectadas en el puerto 10000:
+
+            {{ netstat_10000.stdout }}
+        status_code: 200
+      when: hay_conexiones_10000
+
+    ############################################################
+    # 5️⃣ Iniciar servicio SOLO si no hay conexiones
+    ############################################################
+    - name: Iniciar el servicio si está detenido y sin conexiones
       win_service:
         name: Artisteril Tram Service
         start_mode: auto
         state: started
-      when: service_status != 'Running'
+      when:
+        - service_status != 'Running'
+        - not hay_conexiones_10000
       register: service_result
 
-    - name: Mostrar resultado de iniciar el servicio
+    ############################################################
+    # 6️⃣ Mensaje final opcional
+    ############################################################
+    - name: Mostrar resultado final
       debug:
         msg: >
-          {% if service_status != 'Running' %}
-          Servicio Artisteril Tram estaba detenido y se ha iniciado correctamente.
+          {% if hay_conexiones_10000 %}
+          🔒 Servicio NO modificado porque hay conexiones activas al puerto 10000.
+          {% elif service_status != 'Running' %}
+          ▶️ Servicio Artisteril Tram estaba detenido y fue iniciado correctamente.
           {% else %}
-          Servicio Artisteril Tram ya estaba en ejecución, no se hizo nada.
+          ✅ Servicio Artisteril Tram ya estaba en ejecución, no se hizo nada.
           {% endif %}
