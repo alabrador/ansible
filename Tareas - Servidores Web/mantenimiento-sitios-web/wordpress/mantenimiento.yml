@@ -11,6 +11,10 @@
     wp_sites:
       - domain: algry.com
         user: algry9302
+      - domain: visitarbodegasriberadelduero.com
+        user: visit5841
+      - domain: visitarbodegasrioja.com
+        user: visit7691
       - domain: bodegasduron.com
         user: bodeg3787
       - domain: nutribenprofesionales.es
