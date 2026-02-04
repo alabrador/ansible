@@ -47,7 +47,7 @@
         - not hay_conexiones_10000
 
     ############################################################
-    # 4️⃣ Exportar variables para AWX Workflow (CLAVE)
+    # 4️⃣ Exportar variables para AWX Workflow
     ############################################################
     - name: Exportar datos para notificación Telegram
       set_stats:
