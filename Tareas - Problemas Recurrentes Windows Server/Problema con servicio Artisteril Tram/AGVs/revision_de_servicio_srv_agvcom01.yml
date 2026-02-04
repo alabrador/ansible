@@ -42,27 +42,6 @@
           - "¿Hay conexiones puerto 10000?: {{ hay_conexiones_10000 }}"
 
     ############################################################
-    # 4️⃣ Enviar aviso por Telegram si hay conexiones
-    ############################################################
-    - name: Enviar aviso por Telegram (conexiones activas)
-      uri:
-        url: "{{ telegram_api_url }}"
-        method: POST
-        body_format: json
-        body:
-          chat_id: "{{ telegram_id }}"
-          text: |
-            ⚠️ Artisteril Tram Service
-            🖥️ Servidor: {{ inventory_hostname }}
-
-            ❌ NO se realizó ninguna acción
-            🔌 Conexiones activas detectadas en el puerto 10000:
-
-            {{ netstat_10000.stdout }}
-        status_code: 200
-      when: hay_conexiones_10000
-
-    ############################################################
     # 5️⃣ Iniciar servicio SOLO si no hay conexiones
     ############################################################
     - name: Iniciar el servicio si está detenido y sin conexiones
