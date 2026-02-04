@@ -1,5 +1,5 @@
 - name: Mantenimiento preventivo CyberPanel 2.4.4 (OpenLiteSpeed)
-  hosts: srv-cpweb01, srv-cpweb02
+  hosts: SRV-CPWEB01, SRV-CPWEB02
   become: true
   gather_facts: true
 
