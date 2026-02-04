@@ -1,6 +1,6 @@
 ---
 - name: Chequeo de servidor y servicios
-  hosts: srv-cpweb01, srv-cpweb02
+  hosts: SRV-CPWEB01, SRV-CPWEB02
   become: yes
   gather_facts: yes
 
