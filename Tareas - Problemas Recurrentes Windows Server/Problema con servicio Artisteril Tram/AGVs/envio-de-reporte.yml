@@ -1,9 +1,16 @@
 ---
-- name: Enviar notificación Telegram
+- name: Enviar notificación Artisteril por Telegram
   hosts: localhost
   gather_facts: no
+  connection: local
 
   tasks:
+
+    - name: Normalizar variables recibidas del workflow
+      set_fact:
+        telegram_service_status: "{{ telegram_service_status | default('DESCONOCIDO') }}"
+        telegram_action: "{{ telegram_action | default('N/A') }}"
+        telegram_port_connections: "{{ telegram_port_connections | default([]) }}"
 
     - name: Construir mensaje Telegram
       set_fact:
@@ -30,3 +37,4 @@
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: "{{ telegram_message }}"
+        status_code: 200

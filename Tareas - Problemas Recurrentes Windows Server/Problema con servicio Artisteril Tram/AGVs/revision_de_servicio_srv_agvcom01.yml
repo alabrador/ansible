@@ -35,16 +35,7 @@
         hay_conexiones_10000: "{{ netstat_10000.stdout | length > 0 }}"
 
     ############################################################
-    # 3️⃣ Mostrar resumen
-    ############################################################
-    - name: Mostrar resumen de validaciones
-      debug:
-        msg:
-          - "Estado servicio: {{ service_status }}"
-          - "¿Hay conexiones puerto 10000?: {{ hay_conexiones_10000 }}"
-
-    ############################################################
-    # 4️⃣ Iniciar servicio SOLO si no hay conexiones
+    # 3️⃣ Iniciar servicio SOLO si no hay conexiones
     ############################################################
     - name: Iniciar el servicio si está detenido y sin conexiones
       win_service:
@@ -54,34 +45,29 @@
       when:
         - service_status != 'Running'
         - not hay_conexiones_10000
-      register: service_result
 
     ############################################################
-    # 5️⃣ Variables para el workflow (Telegram)
+    # 4️⃣ Exportar variables para AWX Workflow (CLAVE)
     ############################################################
-    - name: Exportar variables para notificación
-      set_fact:
-        telegram_service_status: "{{ service_status }}"
-        telegram_action: >-
-          {% if hay_conexiones_10000 %}
-          Servicio NO modificado (conexiones activas)
-          {% elif service_status != 'Running' %}
-          Servicio iniciado
-          {% else %}
-          Sin cambios
-          {% endif %}
-        telegram_port_connections: "{{ netstat_10000.stdout_lines | default([]) }}"
+    - name: Exportar datos para notificación Telegram
+      set_stats:
+        data:
+          telegram_service_status: "{{ service_status }}"
+          telegram_action: >-
+            {% if hay_conexiones_10000 %}
+            Servicio NO modificado (conexiones activas)
+            {% elif service_status != 'Running' %}
+            Servicio iniciado
+            {% else %}
+            Sin cambios
+            {% endif %}
+          telegram_port_connections: "{{ netstat_10000.stdout_lines | default([]) }}"
 
     ############################################################
-    # 6️⃣ Mensaje final (log del job)
+    # 5️⃣ Log final del job
     ############################################################
     - name: Mostrar resultado final
       debug:
-        msg: >
-          {% if hay_conexiones_10000 %}
-          🔒 Servicio NO modificado porque hay conexiones activas al puerto 10000.
-          {% elif service_status != 'Running' %}
-          ▶️ Servicio Artisteril Tram estaba detenido y fue iniciado correctamente.
-          {% else %}
-          ✅ Servicio Artisteril Tram ya estaba en ejecución, no se hizo nada.
-          {% endif %}
+        msg:
+          - "Estado servicio: {{ service_status }}"
+          - "Conexiones puerto 10000: {{ hay_conexiones_10000 }}"
