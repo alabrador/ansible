@@ -26,7 +26,7 @@
       set_fact:
         telegram_message: >-
           {% if not tiene_reporte %}
-          ✅ Todas los servidores citrix están encendidas y registradas
+          ✅ Todos los servidores citrix están encendidos y registrados
           {% else %}
           📊 Reporte Citrix – Máquinas no registradas o apagadas
           🕒 {{ current_datetime }}

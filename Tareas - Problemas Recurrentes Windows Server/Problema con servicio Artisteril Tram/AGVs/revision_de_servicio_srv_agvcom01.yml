@@ -1,53 +1,90 @@
 ---
-- name: Verificar servicio y conexiones puerto 10000
+- name: Verificar servicio Artisteril Tram y conexiones puerto 10000
   hosts: SRV-AGVTCM01
   gather_facts: no
+  become: false
 
   tasks:
 
-    - name: Obtener estado del servicio
+    ############################################################
+    # 1️⃣ Estado del servicio
+    ############################################################
+    - name: Obtener estado del servicio Artisteril Tram Service
       win_shell: |
-        Get-Service -Name "Artisteril Tram Service" |
-        Select-Object Status | ConvertTo-Json
+        Get-Service -Name "Artisteril Tram Service" | Select-Object Status | ConvertTo-Json
       register: service_raw
 
-    - name: Guardar estado del servicio
+    - name: Convertir a variable Ansible
       set_fact:
         service_status: "{{ (service_raw.stdout | from_json).Status }}"
 
-    - name: Obtener conexiones al puerto 10000
+    ############################################################
+    # 2️⃣ Verificar conexiones al puerto 10000
+    ############################################################
+    - name: Verificar conexiones activas al puerto 10000
       win_shell: |
         NETSTAT.EXE -ano | findstr :10000
-      register: port_check
+      register: netstat_10000
       failed_when: false
       changed_when: false
 
-    - name: Normalizar resultado del puerto
+    - name: Determinar si hay conexiones al puerto 10000
       set_fact:
-        port_10000_connections: >-
-          {{ port_check.stdout_lines | default([]) }}
+        hay_conexiones_10000: "{{ netstat_10000.stdout | length > 0 }}"
 
-    - name: Decidir acción
-      set_fact:
-        action_decision: >-
-          {% if port_10000_connections | length > 0 %}
-          SKIP
-          {% elif service_status != 'Running' %}
-          START_SERVICE
-          {% else %}
-          OK
-          {% endif %}
+    ############################################################
+    # 3️⃣ Mostrar resumen
+    ############################################################
+    - name: Mostrar resumen de validaciones
+      debug:
+        msg:
+          - "Estado servicio: {{ service_status }}"
+          - "¿Hay conexiones puerto 10000?: {{ hay_conexiones_10000 }}"
 
-    - name: Iniciar servicio SOLO si no hay conexiones
+    ############################################################
+    # 4️⃣ Enviar aviso por Telegram si hay conexiones
+    ############################################################
+    - name: Enviar aviso por Telegram (conexiones activas)
+      uri:
+        url: "{{ telegram_api_url }}"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_id }}"
+          text: |
+            ⚠️ Artisteril Tram Service
+            🖥️ Servidor: {{ inventory_hostname }}
+
+            ❌ NO se realizó ninguna acción
+            🔌 Conexiones activas detectadas en el puerto 10000:
+
+            {{ netstat_10000.stdout }}
+        status_code: 200
+      when: hay_conexiones_10000
+
+    ############################################################
+    # 5️⃣ Iniciar servicio SOLO si no hay conexiones
+    ############################################################
+    - name: Iniciar el servicio si está detenido y sin conexiones
       win_service:
         name: Artisteril Tram Service
-        state: started
         start_mode: auto
-      when: action_decision == 'START_SERVICE'
+        state: started
+      when:
+        - service_status != 'Running'
+        - not hay_conexiones_10000
+      register: service_result
 
-    - name: Exportar datos para el workflow (Job 2)
-      set_stats:
-        data:
-          telegram_action: "{{ action_decision }}"
-          telegram_service_status: "{{ service_status }}"
-          telegram_port_connections: "{{ port_10000_connections }}"
+    ############################################################
+    # 6️⃣ Mensaje final opcional
+    ############################################################
+    - name: Mostrar resultado final
+      debug:
+        msg: >
+          {% if hay_conexiones_10000 %}
+          🔒 Servicio NO modificado porque hay conexiones activas al puerto 10000.
+          {% elif service_status != 'Running' %}
+          ▶️ Servicio Artisteril Tram estaba detenido y fue iniciado correctamente.
+          {% else %}
+          ✅ Servicio Artisteril Tram ya estaba en ejecución, no se hizo nada.
+          {% endif %}
