@@ -28,26 +28,23 @@
       set_fact:
         hay_conexiones_10000: "{{ netstat_10000.stdout | length > 0 }}"
 
-    - name: Iniciar el servicio si está detenido y sin conexiones
-      win_service:
-        name: Artisteril Tram Service
-        start_mode: auto
-        state: started
-      when:
-        - service_status != 'Running'
-        - not hay_conexiones_10000
+    - name: Reiniciar servidor si NO hay conexiones al puerto 10000
+      win_reboot:
+        reboot_timeout: 900
+        msg: "Reinicio automático: no hay conexiones activas en el puerto 10000"
+      when: not hay_conexiones_10000
+      register: reboot_result
 
     - name: Exportar datos para notificación Telegram
       set_stats:
         data:
           telegram_service_status: "{{ service_status }}"
+          telegram_reinicio: "{{ not hay_conexiones_10000 }}"
           telegram_action: >-
-            {% if hay_conexiones_10000 %}
-            Servicio NO modificado (conexiones activas)
-            {% elif service_status != 'Running' %}
-            Servicio iniciado
+            {% if not hay_conexiones_10000 %}
+            🔴 Servidor reiniciado automáticamente (sin conexiones en puerto 10000)
             {% else %}
-            Sin cambios
+            🟢 Servidor NO reiniciado (hay conexiones activas)
             {% endif %}
           telegram_port_connections: "{{ netstat_10000.stdout_lines | default([]) }}"
 
@@ -56,3 +53,4 @@
         msg:
           - "Estado servicio: {{ service_status }}"
           - "Conexiones puerto 10000: {{ hay_conexiones_10000 }}"
+          - "Reinicio ejecutado: {{ not hay_conexiones_10000 }}"

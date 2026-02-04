@@ -10,14 +10,22 @@
         telegram_service_status: "{{ telegram_service_status | default('DESCONOCIDO') }}"
         telegram_action: "{{ telegram_action | default('N/A') }}"
         telegram_port_connections: "{{ telegram_port_connections | default([]) }}"
+        telegram_reinicio: "{{ telegram_reinicio | default(false) }}"
 
     - name: Construir mensaje para ser enviado
       set_fact:
         telegram_message: |
           🖥️ Servidor: SRV-AGVTCM01
           🔧 Servicio: Artisteril Tram Service
-          📌 Estado: {{ telegram_service_status }}
-          ⚙️ Acción: {{ telegram_action }}
+          📌 Estado servicio: {{ telegram_service_status }}
+
+          ⚙️ Acción:
+          {{ telegram_action }}
+
+          {% if telegram_reinicio %}
+          🚨🚨 REINICIO DEL SERVIDOR EJECUTADO 🚨🚨
+          Motivo: No se detectaron conexiones activas en el puerto 10000
+          {% endif %}
 
           {% if telegram_port_connections | length > 0 %}
           🟢 Conexiones activas en puerto 10000:
