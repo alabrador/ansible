@@ -6,9 +6,6 @@
 
   tasks:
 
-    ############################################################
-    # 1️⃣ Estado del servicio
-    ############################################################
     - name: Obtener estado del servicio Artisteril Tram Service
       win_shell: |
         Get-Service -Name "Artisteril Tram Service" |
@@ -20,9 +17,6 @@
       set_fact:
         service_status: "{{ (service_raw.stdout | from_json).Status }}"
 
-    ############################################################
-    # 2️⃣ Verificar conexiones al puerto 10000
-    ############################################################
     - name: Verificar conexiones activas al puerto 10000
       win_shell: |
         NETSTAT.EXE -ano | findstr :10000
@@ -34,9 +28,6 @@
       set_fact:
         hay_conexiones_10000: "{{ netstat_10000.stdout | length > 0 }}"
 
-    ############################################################
-    # 3️⃣ Iniciar servicio SOLO si no hay conexiones
-    ############################################################
     - name: Iniciar el servicio si está detenido y sin conexiones
       win_service:
         name: Artisteril Tram Service
@@ -46,9 +37,6 @@
         - service_status != 'Running'
         - not hay_conexiones_10000
 
-    ############################################################
-    # 4️⃣ Exportar variables para AWX Workflow
-    ############################################################
     - name: Exportar datos para notificación Telegram
       set_stats:
         data:
@@ -63,9 +51,6 @@
             {% endif %}
           telegram_port_connections: "{{ netstat_10000.stdout_lines | default([]) }}"
 
-    ############################################################
-    # 5️⃣ Log final del job
-    ############################################################
     - name: Mostrar resultado final
       debug:
         msg:

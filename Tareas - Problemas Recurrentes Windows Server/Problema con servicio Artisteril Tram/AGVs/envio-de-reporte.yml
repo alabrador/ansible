@@ -2,7 +2,6 @@
 - name: Enviar notificación Artisteril por Telegram
   hosts: localhost
   gather_facts: no
-  connection: local
 
   tasks:
 
@@ -15,9 +14,6 @@
         telegram_action: "{{ telegram_action | default('N/A') }}"
         telegram_port_connections: "{{ telegram_port_connections | default([]) }}"
 
-    ############################################################
-    # 2️⃣ Construir mensaje Telegram
-    ############################################################
     - name: Construir mensaje
       set_fact:
         telegram_message: |
@@ -27,17 +23,14 @@
           ⚙️ Acción: {{ telegram_action }}
 
           {% if telegram_port_connections | length > 0 %}
-          🔴 Conexiones activas en puerto 10000:
+          🟢 Conexiones activas en puerto 10000:
           {% for line in telegram_port_connections %}
           {{ line }}
           {% endfor %}
           {% else %}
-          🟢 No hay conexiones activas en el puerto 10000
+          🔴 No hay conexiones activas en el puerto 10000
           {% endif %}
 
-    ############################################################
-    # 3️⃣ Enviar mensaje a Telegram
-    ############################################################
     - name: Enviar mensaje
       uri:
         url: "https://api.telegram.org/bot{{ telegram_token }}/sendMessage"
