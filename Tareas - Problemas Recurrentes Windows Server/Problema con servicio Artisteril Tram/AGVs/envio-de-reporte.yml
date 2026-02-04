@@ -31,10 +31,10 @@
 
     - name: Enviar mensaje a Telegram
       uri:
-        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        url: "https://api.telegram.org/bot{{ telegram_token }}/sendMessage"
         method: POST
         body_format: json
         body:
-          chat_id: "{{ telegram_chat_id }}"
+          chat_id: "{{ telegram_id }}"
           text: "{{ telegram_message }}"
         status_code: 200
