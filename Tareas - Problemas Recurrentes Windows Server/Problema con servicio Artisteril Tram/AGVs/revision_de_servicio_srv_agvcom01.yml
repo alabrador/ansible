@@ -11,10 +11,12 @@
     ############################################################
     - name: Obtener estado del servicio Artisteril Tram Service
       win_shell: |
-        Get-Service -Name "Artisteril Tram Service" | Select-Object Status | ConvertTo-Json
+        Get-Service -Name "Artisteril Tram Service" |
+        Select-Object Status |
+        ConvertTo-Json
       register: service_raw
 
-    - name: Convertir a variable Ansible
+    - name: Convertir estado del servicio a variable
       set_fact:
         service_status: "{{ (service_raw.stdout | from_json).Status }}"
 
@@ -42,7 +44,7 @@
           - "¿Hay conexiones puerto 10000?: {{ hay_conexiones_10000 }}"
 
     ############################################################
-    # 5️⃣ Iniciar servicio SOLO si no hay conexiones
+    # 4️⃣ Iniciar servicio SOLO si no hay conexiones
     ############################################################
     - name: Iniciar el servicio si está detenido y sin conexiones
       win_service:
@@ -55,7 +57,23 @@
       register: service_result
 
     ############################################################
-    # 6️⃣ Mensaje final opcional
+    # 5️⃣ Variables para el workflow (Telegram)
+    ############################################################
+    - name: Exportar variables para notificación
+      set_fact:
+        telegram_service_status: "{{ service_status }}"
+        telegram_action: >-
+          {% if hay_conexiones_10000 %}
+          Servicio NO modificado (conexiones activas)
+          {% elif service_status != 'Running' %}
+          Servicio iniciado
+          {% else %}
+          Sin cambios
+          {% endif %}
+        telegram_port_connections: "{{ netstat_10000.stdout_lines | default([]) }}"
+
+    ############################################################
+    # 6️⃣ Mensaje final (log del job)
     ############################################################
     - name: Mostrar resultado final
       debug:
