@@ -1,0 +1,47 @@
+---
+- name: Verificar Printer Spooler en SRV-WIN4600
+  hosts: SRV-WIN4600
+  gather_facts: yes
+  tasks:
+    - name: Verificar estado del servicio Printer Spooler
+      ansible.windows.win_service:
+        name: spooler
+      register: spooler_status
+
+    - name: Mostrar estado del servicio
+      debug:
+        msg: "Printer Spooler - Estado: {{ spooler_status.state }}, Startup: {{ spooler_status.startup_type }}"
+
+    - name: Iniciar servicio si está detenido
+      ansible.windows.win_service:
+        name: spooler
+        state: started
+        startup_type: auto
+      when: spooler_status.state != 'started'
+
+    - name: Obtener cola de impresión
+      ansible.windows.win_command: 'Get-PrintJob -PrinterName "*" | Select-Object PrinterName, DocumentName, Status'
+      args:
+        executable: powershell.exe
+      register: print_queue
+      ignore_errors: yes
+
+    - name: Mostrar cola de impresión
+      debug:
+        var: print_queue.stdout_lines
+
+    - name: Limpiar cola de impresión si hay trabajos atascados
+      ansible.windows.win_command: 'Restart-Service -Name spooler -Force'
+      args:
+        executable: powershell.exe
+      when: print_queue.stdout | length > 0
+      ignore_errors: yes
+
+    - name: Verificación final del servicio
+      ansible.windows.win_service:
+        name: spooler
+      register: final_status
+
+    - name: Resultado final
+      debug:
+        msg: "Verificación completada - Printer Spooler: {{ final_status.state }}"
