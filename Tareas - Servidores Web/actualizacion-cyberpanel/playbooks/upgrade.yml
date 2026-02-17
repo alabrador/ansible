@@ -1,6 +1,6 @@
 ---
 - name: Actualización automática de CyberPanel + despliegue index.html
-  hosts: SRV-CPWEB01
+  hosts: SRV-CPWEB01, SRV-CPWEB02
   become: yes
   vars:
     cyberpanel_template_path: /usr/local/CyberCP/baseTemplate/templates/baseTemplate
