@@ -1,6 +1,6 @@
 ---
 - name: Mantenimiento preventivo de servidores Linux
-  hosts: SRV-CPWEB02
+  hosts: SRV-CPWEB01
   become: true
 
   tasks:
