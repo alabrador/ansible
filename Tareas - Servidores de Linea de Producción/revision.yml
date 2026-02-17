@@ -19,10 +19,9 @@
         startup_type: auto
       when: spooler_status.state != 'started'
 
-    - name: Obtener cola de impresión
-      ansible.windows.win_command: 'Get-PrintJob -PrinterName "*" | Select-Object PrinterName, DocumentName, Status'
-      args:
-        executable: powershell.exe
+    - name: Obtener cola de impresión (WMI)
+      ansible.windows.win_command: |
+        powershell.exe -Command "Get-WmiObject -Query 'SELECT * FROM Win32_PrintJob' | Select-Object Name, JobId, Status"
       register: print_queue
       ignore_errors: yes
 
@@ -31,9 +30,7 @@
         var: print_queue.stdout_lines
 
     - name: Limpiar cola de impresión si hay trabajos atascados
-      ansible.windows.win_command: 'Restart-Service -Name spooler -Force'
-      args:
-        executable: powershell.exe
+      ansible.windows.win_command: 'powershell.exe -Command "Restart-Service -Name spooler -Force"'
       when: print_queue.stdout | length > 0
       ignore_errors: yes
 
