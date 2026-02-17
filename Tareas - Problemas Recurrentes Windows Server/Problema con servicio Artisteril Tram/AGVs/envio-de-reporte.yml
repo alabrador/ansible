@@ -22,21 +22,10 @@
           ⚙️ Acción:
           {{ telegram_action }}
 
-          {% if telegram_reinicio %}
           🚨🚨 REINICIO DEL SERVIDOR EJECUTADO 🚨🚨
           Motivo: No se detectaron conexiones activas en el puerto 10000
-          {% endif %}
 
-          {% if telegram_port_connections | length > 0 %}
-          🟢 Conexiones activas en puerto 10000:
-          {% for line in telegram_port_connections %}
-          {{ line }}
-          {% endfor %}
-          {% else %}
-          🔴 No hay conexiones activas en el puerto 10000
-          {% endif %}
-
-    - name: Enviar mensaje
+    - name: Enviar mensaje SOLO si hubo reinicio
       uri:
         url: "https://api.telegram.org/bot{{ telegram_token }}/sendMessage"
         method: POST
@@ -45,3 +34,4 @@
           chat_id: "{{ telegram_id }}"
           text: "{{ telegram_message }}"
         status_code: 200
+      when: telegram_reinicio | bool
