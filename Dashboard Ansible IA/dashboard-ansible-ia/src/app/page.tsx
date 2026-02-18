@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type ExecuteResponse = {
   transcript?: string;
@@ -85,6 +85,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [hints, setHints] = useState<string[]>([]);
   const [liveTranscript, setLiveTranscript] = useState("");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -92,6 +93,25 @@ export default function Home() {
   const silenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speechDetectedRef = useRef(false);
   const recordingStartedAtRef = useRef(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const savedTheme = window.localStorage.getItem("dashboard-theme");
+    if (savedTheme === "dark" || savedTheme === "light") {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem("dashboard-theme", theme);
+  }, [theme]);
 
   const clearSilenceTimer = () => {
     if (silenceTimeoutRef.current) {
@@ -253,27 +273,83 @@ export default function Home() {
       : "Hablar ahora";
 
   const panelClass =
-    "rounded-2xl border border-white/15 bg-white/5 p-5 shadow-[0_8px_24px_-16px_rgba(59,130,246,0.35)] backdrop-blur-2xl";
+    theme === "dark"
+      ? "rounded-2xl border border-white/15 bg-white/5 p-5 shadow-[0_8px_24px_-16px_rgba(59,130,246,0.35)] backdrop-blur-2xl"
+      : "rounded-2xl border border-zinc-200 bg-white p-5 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.2)]";
+
+  const mainClass =
+    theme === "dark" ? "min-h-screen bg-zinc-950 text-zinc-100" : "min-h-screen bg-zinc-50 text-zinc-900";
+
+  const subtitleClass = theme === "dark" ? "text-zinc-300" : "text-zinc-600";
+
+  const helperCardClass =
+    theme === "dark"
+      ? "rounded-xl border border-white/10 bg-zinc-950/70 px-4 py-2 text-xs text-zinc-300"
+      : "rounded-xl border border-zinc-200 bg-zinc-100 px-4 py-2 text-xs text-zinc-700";
+
+  const topPanelClass =
+    theme === "dark"
+      ? "rounded-3xl border border-white/15 bg-white/5 p-6 shadow-[0_10px_28px_-18px_rgba(56,189,248,0.45)] backdrop-blur-2xl md:min-h-[260px]"
+      : "rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_10px_28px_-18px_rgba(15,23,42,0.25)] md:min-h-[260px]";
+
+  const titleClass =
+    theme === "dark"
+      ? "bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl"
+      : "bg-gradient-to-r from-zinc-900 via-zinc-700 to-zinc-500 bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl";
+
+  const topLabelClass = theme === "dark" ? "text-zinc-400" : "text-zinc-500";
+
+  const statusTextClass = theme === "dark" ? "text-zinc-200" : "text-zinc-700";
+
+  const transcriptTextClass = theme === "dark" ? "text-zinc-100" : "text-zinc-800";
+
+  const emptyTextClass = theme === "dark" ? "text-zinc-400" : "text-zinc-500";
+
+  const linkClass =
+    theme === "dark"
+      ? "inline-flex items-center gap-1 font-medium text-sky-300 hover:text-sky-200"
+      : "inline-flex items-center gap-1 font-medium text-sky-700 hover:text-sky-600";
+
+  const hintBoxClass =
+    theme === "dark"
+      ? "mt-4 rounded-lg border border-zinc-700 bg-zinc-950/70 p-3 text-xs text-zinc-300"
+      : "mt-4 rounded-lg border border-zinc-200 bg-zinc-100 p-3 text-xs text-zinc-700";
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-sky-500/10 blur-3xl" />
-        <div className="absolute bottom-10 right-20 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl" />
-      </div>
+    <main className={mainClass}>
+      {theme === "dark" ? (
+        <div className="pointer-events-none fixed inset-0 -z-10">
+          <div className="absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-sky-500/10 blur-3xl" />
+          <div className="absolute bottom-10 right-20 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl" />
+        </div>
+      ) : null}
       <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col justify-center gap-6 px-6 py-10">
         <header className="space-y-3 text-center">
-          <p className="text-sm uppercase tracking-[0.2em] text-zinc-400">Dashboard Ansible - Whisper IA</p>
-          <h1 className="bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl">
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+              className={
+                theme === "dark"
+                  ? "rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-zinc-200 transition hover:bg-white/15"
+                  : "rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
+              }
+              aria-label="Cambiar tema"
+            >
+              {theme === "dark" ? "☀️ Claro" : "🌙 Oscuro"}
+            </button>
+          </div>
+          <p className={`text-sm uppercase tracking-[0.2em] ${topLabelClass}`}>Dashboard Ansible - Whisper IA</p>
+          <h1 className={titleClass}>
             Whisper + AWX
           </h1>
-          <p className="mx-auto max-w-2xl text-sm text-zinc-300">
+          <p className={`mx-auto max-w-2xl text-sm ${subtitleClass}`}>
             Presiona el botón, habla que tarea quieres ejecutar y se ejecutará automáticamente en AWX.
           </p>
         </header>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <section className="rounded-3xl border border-white/15 bg-white/5 p-6 shadow-[0_10px_28px_-18px_rgba(56,189,248,0.45)] backdrop-blur-2xl md:min-h-[260px]">
+          <section className={topPanelClass}>
             <div className="flex h-full flex-col items-center justify-center gap-4">
               <button
                 onClick={isRecording ? stopRecording : startRecording}
@@ -303,9 +379,9 @@ export default function Home() {
                 </span>
               </button>
 
-              <p className="text-sm font-medium text-zinc-200">{primaryButtonLabel}</p>
+              <p className={`text-sm font-medium ${statusTextClass}`}>{primaryButtonLabel}</p>
 
-              <div className="rounded-xl border border-white/10 bg-zinc-950/70 px-4 py-2 text-xs text-zinc-300">
+              <div className={helperCardClass}>
                 {isLoading
                   ? "Procesando audio y ejecutando en AWX..."
                   : liveTranscript
@@ -318,15 +394,15 @@ export default function Home() {
           </section>
 
           <section className={`${panelClass} h-full md:min-h-[260px]`}>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Transcripción</h2>
-            <p className="mt-3 min-h-16 text-sm leading-relaxed text-zinc-100">
+            <h2 className={`text-xs font-semibold uppercase tracking-wider ${topLabelClass}`}>Transcripción</h2>
+            <p className={`mt-3 min-h-16 text-sm leading-relaxed ${transcriptTextClass}`}>
               {transcript || "Aquí aparecerá el texto reconocido por Whisper."}
             </p>
           </section>
         </div>
 
         <section className={panelClass}>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Resultado AWX</h2>
+          <h2 className={`text-xs font-semibold uppercase tracking-wider ${topLabelClass}`}>Resultado AWX</h2>
 
           {error ? (
             <p className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -335,7 +411,7 @@ export default function Home() {
           ) : null}
 
           {result ? (
-            <div className="mt-3 space-y-2 text-sm text-zinc-100">
+            <div className={`mt-3 space-y-2 text-sm ${transcriptTextClass}`}>
               <p>
                 Comando detectado: <strong>{result.matchedCommand}</strong>
               </p>
@@ -345,17 +421,17 @@ export default function Home() {
                 href={result.awxUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 font-medium text-sky-300 hover:text-sky-200"
+                className={linkClass}
               >
                 Ver ejecución en AWX <span>↗</span>
               </a>
             </div>
           ) : (
-            <p className="mt-3 text-sm text-zinc-400">Aún no hay ejecución.</p>
+            <p className={`mt-3 text-sm ${emptyTextClass}`}>Aún no hay ejecución.</p>
           )}
 
           {hints.length ? (
-            <div className="mt-4 rounded-lg border border-zinc-700 bg-zinc-950/70 p-3 text-xs text-zinc-300">
+            <div className={hintBoxClass}>
               <p className="font-semibold">Comandos disponibles:</p>
               <p>{hints.join(", ")}</p>
             </div>
