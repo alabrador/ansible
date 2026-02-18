@@ -133,8 +133,7 @@ export async function POST(request: Request) {
     if (!matched) {
       return NextResponse.json(
         {
-          error:
-            "No se encontró un comando compatible. Ajusta aliases en src/config/command-mappings.ts.",
+          error: "No se encontró un comando compatible con la voz detectada.",
           transcript,
           supportedCommands: getSupportedCommands(),
         },

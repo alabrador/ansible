@@ -243,8 +243,8 @@ export default function Home() {
   };
 
   const primaryButtonClass = isRecording
-    ? "bg-red-600 text-white hover:bg-red-500"
-    : "bg-foreground text-background hover:opacity-90";
+    ? "bg-red-500 text-white hover:bg-red-400"
+    : "bg-gradient-to-br from-sky-400 via-cyan-400 to-blue-500 text-zinc-950 hover:from-sky-300 hover:to-blue-400";
 
   const primaryButtonLabel = isLoading
     ? "Procesando..."
@@ -263,12 +263,12 @@ export default function Home() {
       </div>
       <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col justify-center gap-6 px-6 py-10">
         <header className="space-y-3 text-center">
-          <p className="text-sm uppercase tracking-[0.2em] text-zinc-400">Dashboard Ansible IA</p>
+          <p className="text-sm uppercase tracking-[0.2em] text-zinc-400">Dashboard Ansible - Whisper IA</p>
           <h1 className="bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl">
-            Whisper + AWX por Voz
+            Whisper + AWX
           </h1>
           <p className="mx-auto max-w-2xl text-sm text-zinc-300">
-            Presiona el botón, dicta el comando y al detener la grabación se ejecuta automáticamente en AWX.
+            Presiona el botón, dicta el comando y se ejecuta automáticamente en AWX.
           </p>
         </header>
 
@@ -276,13 +276,30 @@ export default function Home() {
           <div className="flex flex-col items-center gap-4">
             <button
               onClick={isRecording ? stopRecording : startRecording}
-              className={`group relative flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold shadow-xl shadow-black/40 transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${primaryButtonClass}`}
+              className={`group relative flex h-20 w-20 items-center justify-center rounded-full border border-white/30 text-2xl font-semibold shadow-2xl shadow-sky-500/30 ring-4 ring-white/10 transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${primaryButtonClass}`}
               disabled={isLoading}
             >
               <span
                 className={`absolute inset-0 rounded-full ${isRecording ? "animate-ping bg-red-500/30" : ""}`}
               />
-              <span className="relative">🎙️</span>
+              <span className="relative">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-8 w-8"
+                  aria-hidden="true"
+                >
+                  <rect x="9" y="3" width="6" height="12" rx="3" />
+                  <path d="M5 11a7 7 0 0 0 14 0" />
+                  <path d="M12 18v3" />
+                  <path d="M8 21h8" />
+                </svg>
+              </span>
             </button>
 
             <p className="text-sm font-medium text-zinc-200">{primaryButtonLabel}</p>
