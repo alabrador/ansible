@@ -9,7 +9,7 @@ CORS(app)
 
 # Configuración
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'wav', 'mp3', 'm4a', 'ogg', 'flac'}
+ALLOWED_EXTENSIONS = {'wav', 'mp3', 'm4a', 'ogg', 'flac', 'webm'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -17,7 +17,7 @@ app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024  # 25MB máx
 
 # Cargar modelo Whisper
 print("Cargando modelo Whisper...")
-model = whisper.load_model("base")
+model = whisper.load_model("small")
 print("Modelo cargado correctamente")
 
 def allowed_file(filename):
