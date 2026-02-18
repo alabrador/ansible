@@ -2,6 +2,160 @@
 
 import { useEffect, useRef, useState } from "react";
 
+type Language = "es" | "en" | "it" | "pt";
+
+const speechLocales: Record<Language, string> = {
+  es: "es-ES",
+  en: "en-US",
+  it: "it-IT",
+  pt: "pt-PT",
+};
+
+const languageOptions: Array<{ code: Language; label: string }> = [
+  { code: "es", label: "ES" },
+  { code: "en", label: "EN" },
+  { code: "it", label: "IT" },
+  { code: "pt", label: "PT" },
+];
+
+const translations: Record<
+  Language,
+  {
+    themeLight: string;
+    themeDark: string;
+    themeToggleAria: string;
+    languageLabel: string;
+    languageSelectAria: string;
+    headerSubtitle: string;
+    pageDescription: string;
+    buttonProcessing: string;
+    buttonStop: string;
+    buttonSpeak: string;
+    statusProcessing: string;
+    statusListening: string;
+    statusCaptured: string;
+    statusReady: string;
+    sectionTranscript: string;
+    transcriptPlaceholder: string;
+    sectionResult: string;
+    commandDetected: string;
+    viewAwx: string;
+    noExecution: string;
+    availableCommands: string;
+    micAccessError: string;
+    unknownError: string;
+    invalidAudioCommand: string;
+  }
+> = {
+  es: {
+    themeLight: "☀️ Claro",
+    themeDark: "🌙 Oscuro",
+    themeToggleAria: "Cambiar tema",
+    languageLabel: "Idioma",
+    languageSelectAria: "Cambiar idioma",
+    headerSubtitle: "Dashboard Ansible - Whisper IA",
+    pageDescription:
+      "Presiona el botón, habla que tarea quieres ejecutar y se ejecutará automáticamente en AWX.",
+    buttonProcessing: "Procesando...",
+    buttonStop: "Detener grabación",
+    buttonSpeak: "Hablar ahora",
+    statusProcessing: "Procesando audio y ejecutando en AWX...",
+    statusListening: "Escuchando y transcribiendo en vivo...",
+    statusCaptured: "Audio capturado. Ejecutando comando...",
+    statusReady: "Listo para escuchar tu orden",
+    sectionTranscript: "Transcripción",
+    transcriptPlaceholder: "Aquí aparecerá el texto reconocido por Whisper.",
+    sectionResult: "Resultado AWX",
+    commandDetected: "Comando detectado",
+    viewAwx: "Ver ejecución en AWX",
+    noExecution: "Aún no hay ejecución.",
+    availableCommands: "Comandos disponibles:",
+    micAccessError: "No se pudo acceder al micrófono.",
+    unknownError: "Error inesperado.",
+    invalidAudioCommand: "No se encontró un comando válido en el audio.",
+  },
+  en: {
+    themeLight: "☀️ Light",
+    themeDark: "🌙 Dark",
+    themeToggleAria: "Toggle theme",
+    languageLabel: "Language",
+    languageSelectAria: "Change language",
+    headerSubtitle: "Ansible Dashboard - Whisper AI",
+    pageDescription: "Press the button, say the task you want to run, and it will execute automatically in AWX.",
+    buttonProcessing: "Processing...",
+    buttonStop: "Stop recording",
+    buttonSpeak: "Speak now",
+    statusProcessing: "Processing audio and executing in AWX...",
+    statusListening: "Listening and transcribing live...",
+    statusCaptured: "Audio captured. Executing command...",
+    statusReady: "Ready to listen to your command",
+    sectionTranscript: "Transcript",
+    transcriptPlaceholder: "Whisper transcript will appear here.",
+    sectionResult: "AWX Result",
+    commandDetected: "Detected command",
+    viewAwx: "View execution in AWX",
+    noExecution: "No execution yet.",
+    availableCommands: "Available commands:",
+    micAccessError: "Could not access the microphone.",
+    unknownError: "Unexpected error.",
+    invalidAudioCommand: "No valid command was found in the audio.",
+  },
+  it: {
+    themeLight: "☀️ Chiaro",
+    themeDark: "🌙 Scuro",
+    themeToggleAria: "Cambia tema",
+    languageLabel: "Lingua",
+    languageSelectAria: "Cambia lingua",
+    headerSubtitle: "Dashboard Ansible - Whisper IA",
+    pageDescription:
+      "Premi il pulsante, pronuncia l'attività da eseguire e verrà avviata automaticamente in AWX.",
+    buttonProcessing: "Elaborazione...",
+    buttonStop: "Ferma registrazione",
+    buttonSpeak: "Parla ora",
+    statusProcessing: "Elaborazione audio ed esecuzione in AWX...",
+    statusListening: "Ascolto e trascrizione in tempo reale...",
+    statusCaptured: "Audio acquisito. Esecuzione comando...",
+    statusReady: "Pronto ad ascoltare il tuo comando",
+    sectionTranscript: "Trascrizione",
+    transcriptPlaceholder: "Qui apparirà il testo riconosciuto da Whisper.",
+    sectionResult: "Risultato AWX",
+    commandDetected: "Comando rilevato",
+    viewAwx: "Vedi esecuzione in AWX",
+    noExecution: "Nessuna esecuzione ancora.",
+    availableCommands: "Comandi disponibili:",
+    micAccessError: "Impossibile accedere al microfono.",
+    unknownError: "Errore imprevisto.",
+    invalidAudioCommand: "Nessun comando valido trovato nell'audio.",
+  },
+  pt: {
+    themeLight: "☀️ Claro",
+    themeDark: "🌙 Escuro",
+    themeToggleAria: "Alternar tema",
+    languageLabel: "Idioma",
+    languageSelectAria: "Alterar idioma",
+    headerSubtitle: "Dashboard Ansible - Whisper IA",
+    pageDescription:
+      "Pressione o botão, diga a tarefa que deseja executar e ela será executada automaticamente no AWX.",
+    buttonProcessing: "Processando...",
+    buttonStop: "Parar gravação",
+    buttonSpeak: "Falar agora",
+    statusProcessing: "Processando áudio e executando no AWX...",
+    statusListening: "Ouvindo e transcrevendo ao vivo...",
+    statusCaptured: "Áudio capturado. Executando comando...",
+    statusReady: "Pronto para ouvir seu comando",
+    sectionTranscript: "Transcrição",
+    transcriptPlaceholder: "Aqui aparecerá o texto reconhecido pelo Whisper.",
+    sectionResult: "Resultado AWX",
+    commandDetected: "Comando detectado",
+    viewAwx: "Ver execução no AWX",
+    noExecution: "Ainda não há execução.",
+    availableCommands: "Comandos disponíveis:",
+    micAccessError: "Não foi possível acessar o microfone.",
+    unknownError: "Erro inesperado.",
+    invalidAudioCommand: "Nenhum comando válido foi encontrado no áudio.",
+  },
+};
+
 type ExecuteResponse = {
   transcript?: string;
   matchedCommand?: string;
@@ -56,7 +210,7 @@ function getSpeechRecognitionConstructor(): BrowserSpeechRecognitionConstructor 
   return browserWindow.SpeechRecognition ?? browserWindow.webkitSpeechRecognition ?? null;
 }
 
-function formatError(error: unknown): string {
+function formatError(error: unknown, fallback: string): string {
   if (typeof error === "string") {
     return error;
   }
@@ -70,7 +224,7 @@ function formatError(error: unknown): string {
     return error.message;
   }
 
-  return "Error inesperado.";
+  return fallback;
 }
 
 export default function Home() {
@@ -86,6 +240,9 @@ export default function Home() {
   const [hints, setHints] = useState<string[]>([]);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [language, setLanguage] = useState<Language>("es");
+
+  const t = translations[language];
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -112,6 +269,25 @@ export default function Home() {
 
     window.localStorage.setItem("dashboard-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const savedLanguage = window.localStorage.getItem("dashboard-language");
+    if (savedLanguage === "es" || savedLanguage === "en" || savedLanguage === "it" || savedLanguage === "pt") {
+      setLanguage(savedLanguage);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem("dashboard-language", language);
+  }, [language]);
 
   const clearSilenceTimer = () => {
     if (silenceTimeoutRef.current) {
@@ -161,13 +337,13 @@ export default function Home() {
           setHints(payload.supportedCommands);
         }
 
-        throw new Error(payload.error ?? "No se encontró un comando válido en el audio.");
+        throw new Error(payload.error ?? t.invalidAudioCommand);
       }
 
       setResult(payload);
       setAudioBlob(null);
     } catch (executionError) {
-      setError(formatError(executionError));
+      setError(formatError(executionError, t.unknownError));
     } finally {
       setIsLoading(false);
     }
@@ -190,7 +366,7 @@ export default function Home() {
       const SpeechRecognitionCtor = getSpeechRecognitionConstructor();
       if (SpeechRecognitionCtor) {
         const recognition = new SpeechRecognitionCtor();
-        recognition.lang = "es-ES";
+        recognition.lang = speechLocales[language];
         recognition.interimResults = true;
         recognition.continuous = true;
 
@@ -249,7 +425,7 @@ export default function Home() {
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
     } catch {
-      setError("No se pudo acceder al micrófono.");
+      setError(t.micAccessError);
     }
   };
 
@@ -267,10 +443,10 @@ export default function Home() {
     : "bg-gradient-to-br from-sky-400 via-cyan-400 to-blue-500 text-zinc-950 hover:from-sky-300 hover:to-blue-400";
 
   const primaryButtonLabel = isLoading
-    ? "Procesando..."
+    ? t.buttonProcessing
     : isRecording
-      ? "Detener grabación"
-      : "Hablar ahora";
+      ? t.buttonStop
+      : t.buttonSpeak;
 
   const panelClass =
     theme === "dark"
@@ -325,7 +501,48 @@ export default function Home() {
       ) : null}
       <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col justify-center gap-6 px-6 py-10">
         <header className="space-y-3 text-center">
-          <div className="flex items-center justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div
+              className={
+                theme === "dark"
+                  ? "inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-2 py-1"
+                  : "inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white px-2 py-1"
+              }
+            >
+              <div
+                role="group"
+                aria-label={t.languageSelectAria}
+                className={
+                  theme === "dark"
+                    ? "inline-flex overflow-hidden rounded-full border border-white/15 bg-zinc-900/60"
+                    : "inline-flex overflow-hidden rounded-full border border-zinc-300 bg-zinc-100"
+                }
+              >
+                {languageOptions.map((option) => {
+                  const isActive = language === option.code;
+
+                  return (
+                    <button
+                      key={option.code}
+                      type="button"
+                      onClick={() => setLanguage(option.code)}
+                      className={
+                        isActive
+                          ? theme === "dark"
+                            ? "bg-sky-500/90 px-2.5 py-1 text-xs font-semibold text-white"
+                            : "bg-sky-600 px-2.5 py-1 text-xs font-semibold text-white"
+                          : theme === "dark"
+                            ? "px-2.5 py-1 text-xs font-medium text-zinc-300 transition hover:bg-white/10"
+                            : "px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200"
+                      }
+                      aria-pressed={isActive}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
@@ -334,17 +551,17 @@ export default function Home() {
                   ? "rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-zinc-200 transition hover:bg-white/15"
                   : "rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
               }
-              aria-label="Cambiar tema"
+              aria-label={t.themeToggleAria}
             >
-              {theme === "dark" ? "☀️ Claro" : "🌙 Oscuro"}
+              {theme === "dark" ? t.themeLight : t.themeDark}
             </button>
           </div>
-          <p className={`text-sm uppercase tracking-[0.2em] ${topLabelClass}`}>Dashboard Ansible - Whisper IA</p>
+          <p className={`text-sm uppercase tracking-[0.2em] ${topLabelClass}`}>{t.headerSubtitle}</p>
           <h1 className={titleClass}>
             Whisper + AWX
           </h1>
           <p className={`mx-auto max-w-2xl text-sm ${subtitleClass}`}>
-            Presiona el botón, habla que tarea quieres ejecutar y se ejecutará automáticamente en AWX.
+            {t.pageDescription}
           </p>
         </header>
 
@@ -383,26 +600,26 @@ export default function Home() {
 
               <div className={helperCardClass}>
                 {isLoading
-                  ? "Procesando audio y ejecutando en AWX..."
+                  ? t.statusProcessing
                   : liveTranscript
-                    ? "Escuchando y transcribiendo en vivo..."
+                    ? t.statusListening
                     : audioBlob
-                      ? "Audio capturado. Ejecutando comando..."
-                      : "Listo para escuchar tu orden"}
+                      ? t.statusCaptured
+                      : t.statusReady}
               </div>
             </div>
           </section>
 
           <section className={`${panelClass} h-full md:min-h-[260px]`}>
-            <h2 className={`text-xs font-semibold uppercase tracking-wider ${topLabelClass}`}>Transcripción</h2>
+            <h2 className={`text-xs font-semibold uppercase tracking-wider ${topLabelClass}`}>{t.sectionTranscript}</h2>
             <p className={`mt-3 min-h-16 text-sm leading-relaxed ${transcriptTextClass}`}>
-              {transcript || "Aquí aparecerá el texto reconocido por Whisper."}
+              {transcript || t.transcriptPlaceholder}
             </p>
           </section>
         </div>
 
         <section className={panelClass}>
-          <h2 className={`text-xs font-semibold uppercase tracking-wider ${topLabelClass}`}>Resultado AWX</h2>
+          <h2 className={`text-xs font-semibold uppercase tracking-wider ${topLabelClass}`}>{t.sectionResult}</h2>
 
           {error ? (
             <p className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -413,7 +630,7 @@ export default function Home() {
           {result ? (
             <div className={`mt-3 space-y-2 text-sm ${transcriptTextClass}`}>
               <p>
-                Comando detectado: <strong>{result.matchedCommand}</strong>
+                {t.commandDetected}: <strong>{result.matchedCommand}</strong>
               </p>
               <p>Template ID: {result.templateId}</p>
               <p>Job ID: {result.jobId}</p>
@@ -423,16 +640,16 @@ export default function Home() {
                 rel="noreferrer"
                 className={linkClass}
               >
-                Ver ejecución en AWX <span>↗</span>
+                {t.viewAwx} <span>↗</span>
               </a>
             </div>
           ) : (
-            <p className={`mt-3 text-sm ${emptyTextClass}`}>Aún no hay ejecución.</p>
+            <p className={`mt-3 text-sm ${emptyTextClass}`}>{t.noExecution}</p>
           )}
 
           {hints.length ? (
             <div className={hintBoxClass}>
-              <p className="font-semibold">Comandos disponibles:</p>
+              <p className="font-semibold">{t.availableCommands}</p>
               <p>{hints.join(", ")}</p>
             </div>
           ) : null}
