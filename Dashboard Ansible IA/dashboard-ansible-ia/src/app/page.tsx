@@ -253,7 +253,7 @@ export default function Home() {
       : "Hablar ahora";
 
   const panelClass =
-    "rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-900/90 via-zinc-900/70 to-zinc-950/80 p-5 shadow-[0_10px_40px_-20px_rgba(59,130,246,0.45)] backdrop-blur-xl";
+    "rounded-2xl border border-white/15 bg-white/5 p-5 shadow-[0_8px_24px_-16px_rgba(59,130,246,0.35)] backdrop-blur-2xl";
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -272,56 +272,58 @@ export default function Home() {
           </p>
         </header>
 
-        <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-zinc-900 via-zinc-900/75 to-zinc-950 p-6 shadow-[0_20px_60px_-35px_rgba(56,189,248,0.55)] backdrop-blur-2xl">
-          <div className="flex flex-col items-center gap-4">
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              className={`group relative flex h-20 w-20 items-center justify-center rounded-full border border-white/30 text-2xl font-semibold shadow-2xl shadow-sky-500/30 ring-4 ring-white/10 transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${primaryButtonClass}`}
-              disabled={isLoading}
-            >
-              <span
-                className={`absolute inset-0 rounded-full ${isRecording ? "animate-ping bg-red-500/30" : ""}`}
-              />
-              <span className="relative">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-8 w-8"
-                  aria-hidden="true"
-                >
-                  <rect x="9" y="3" width="6" height="12" rx="3" />
-                  <path d="M5 11a7 7 0 0 0 14 0" />
-                  <path d="M12 18v3" />
-                  <path d="M8 21h8" />
-                </svg>
-              </span>
-            </button>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <section className="rounded-3xl border border-white/15 bg-white/5 p-6 shadow-[0_10px_28px_-18px_rgba(56,189,248,0.45)] backdrop-blur-2xl">
+            <div className="flex h-full flex-col items-center justify-center gap-4">
+              <button
+                onClick={isRecording ? stopRecording : startRecording}
+                className={`group relative flex h-20 w-20 items-center justify-center rounded-full border border-white/35 text-2xl font-semibold shadow-lg shadow-sky-500/20 ring-2 ring-white/15 transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${primaryButtonClass}`}
+                disabled={isLoading}
+              >
+                <span
+                  className={`absolute inset-0 rounded-full ${isRecording ? "animate-ping bg-red-500/30" : ""}`}
+                />
+                <span className="relative">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-8 w-8"
+                    aria-hidden="true"
+                  >
+                    <rect x="9" y="3" width="6" height="12" rx="3" />
+                    <path d="M5 11a7 7 0 0 0 14 0" />
+                    <path d="M12 18v3" />
+                    <path d="M8 21h8" />
+                  </svg>
+                </span>
+              </button>
 
-            <p className="text-sm font-medium text-zinc-200">{primaryButtonLabel}</p>
+              <p className="text-sm font-medium text-zinc-200">{primaryButtonLabel}</p>
 
-            <div className="rounded-xl border border-white/10 bg-zinc-950/70 px-4 py-2 text-xs text-zinc-300">
-              {isLoading
-                ? "Procesando audio y ejecutando en AWX..."
-                : liveTranscript
-                  ? "Escuchando y transcribiendo en vivo..."
-                  : audioBlob
-                    ? "Audio capturado. Ejecutando comando..."
-                    : "Listo para escuchar tu comando"}
+              <div className="rounded-xl border border-white/10 bg-zinc-950/70 px-4 py-2 text-xs text-zinc-300">
+                {isLoading
+                  ? "Procesando audio y ejecutando en AWX..."
+                  : liveTranscript
+                    ? "Escuchando y transcribiendo en vivo..."
+                    : audioBlob
+                      ? "Audio capturado. Ejecutando comando..."
+                      : "Listo para escuchar tu orden"}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className={panelClass}>
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Transcripción</h2>
-          <p className="mt-3 min-h-16 text-sm leading-relaxed text-zinc-100">
-            {transcript || "Aquí aparecerá el texto reconocido por Whisper."}
-          </p>
-        </section>
+          <section className={panelClass}>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Transcripción</h2>
+            <p className="mt-3 min-h-16 text-sm leading-relaxed text-zinc-100">
+              {transcript || "Aquí aparecerá el texto reconocido por Whisper."}
+            </p>
+          </section>
+        </div>
 
         <section className={panelClass}>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Resultado AWX</h2>
