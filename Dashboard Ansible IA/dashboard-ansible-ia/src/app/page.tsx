@@ -252,22 +252,31 @@ export default function Home() {
       ? "Detener grabación"
       : "Hablar ahora";
 
+  const panelClass =
+    "rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-900/90 via-zinc-900/70 to-zinc-950/80 p-5 shadow-[0_10px_40px_-20px_rgba(59,130,246,0.45)] backdrop-blur-xl";
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute left-1/2 top-16 h-72 w-72 -translate-x-1/2 rounded-full bg-sky-500/10 blur-3xl" />
+        <div className="absolute bottom-10 right-20 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl" />
+      </div>
       <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col justify-center gap-6 px-6 py-10">
         <header className="space-y-3 text-center">
           <p className="text-sm uppercase tracking-[0.2em] text-zinc-400">Dashboard Ansible IA</p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Whisper + AWX por Voz</h1>
+          <h1 className="bg-gradient-to-r from-white via-zinc-100 to-zinc-300 bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl">
+            Whisper + AWX por Voz
+          </h1>
           <p className="mx-auto max-w-2xl text-sm text-zinc-300">
             Presiona el botón, dicta el comando y al detener la grabación se ejecuta automáticamente en AWX.
           </p>
         </header>
 
-        <section className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-6 backdrop-blur">
+        <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-zinc-900 via-zinc-900/75 to-zinc-950 p-6 shadow-[0_20px_60px_-35px_rgba(56,189,248,0.55)] backdrop-blur-2xl">
           <div className="flex flex-col items-center gap-4">
             <button
               onClick={isRecording ? stopRecording : startRecording}
-              className={`group relative flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold shadow-lg transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${primaryButtonClass}`}
+              className={`group relative flex h-20 w-20 items-center justify-center rounded-full text-2xl font-semibold shadow-xl shadow-black/40 transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${primaryButtonClass}`}
               disabled={isLoading}
             >
               <span
@@ -278,7 +287,7 @@ export default function Home() {
 
             <p className="text-sm font-medium text-zinc-200">{primaryButtonLabel}</p>
 
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-xs text-zinc-300">
+            <div className="rounded-xl border border-white/10 bg-zinc-950/70 px-4 py-2 text-xs text-zinc-300">
               {isLoading
                 ? "Procesando audio y ejecutando en AWX..."
                 : liveTranscript
@@ -290,14 +299,14 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5">
+        <section className={panelClass}>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Transcripción</h2>
           <p className="mt-3 min-h-16 text-sm leading-relaxed text-zinc-100">
             {transcript || "Aquí aparecerá el texto reconocido por Whisper."}
           </p>
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5">
+        <section className={panelClass}>
           <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Resultado AWX</h2>
 
           {error ? (
