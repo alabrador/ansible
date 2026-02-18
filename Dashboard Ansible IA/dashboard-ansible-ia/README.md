@@ -59,6 +59,18 @@ npm run dev
 
 Abre `http://localhost:3000`.
 
+## Producción
+
+Se incluye un runbook completo para Linux (systemd + Nginx + TLS):
+
+- [PRODUCCION.md](PRODUCCION.md)
+
+Archivos de despliegue incluidos:
+
+- `deploy/systemd/dashboard-ansible-ia.service`
+- `deploy/nginx/dashboard-ansible-ia.conf`
+- `../whisper-server/deploy/systemd/whisper-server.service`
+
 ## Comandos de voz habilitados
 
 La app está limitada a 5 ejecuciones configuradas en `src/config/command-mappings.ts`:
