@@ -268,7 +268,7 @@ export default function Home() {
             Whisper + AWX
           </h1>
           <p className="mx-auto max-w-2xl text-sm text-zinc-300">
-            Presiona el botón, dicta el comando y se ejecuta automáticamente en AWX.
+            Presiona el botón, habla que tarea quieres ejecutar y se ejecutará automáticamente en AWX.
           </p>
         </header>
 
