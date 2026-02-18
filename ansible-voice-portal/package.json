@@ -1,0 +1,32 @@
+{
+  "name": "ansible-voice-portal",
+  "version": "1.0.0",
+  "description": "A portal that receives voice commands to execute tasks in Ansible using AWX.",
+  "main": "src/App.tsx",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "axios": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest"
+  },
+  "keywords": [
+    "ansible",
+    "voice",
+    "portal",
+    "AWX",
+    "web-speech-api"
+  ],
+  "author": "alabrador",
+  "license": "MIT"
+}
