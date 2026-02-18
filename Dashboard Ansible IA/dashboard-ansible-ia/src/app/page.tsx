@@ -505,8 +505,8 @@ export default function Home() {
             <div
               className={
                 theme === "dark"
-                  ? "inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-2 py-1"
-                  : "inline-flex items-center gap-2 rounded-full border border-zinc-300 bg-white px-2 py-1"
+                  ? "inline-flex h-10 items-center rounded-full border border-white/20 bg-white/5 px-2"
+                  : "inline-flex h-10 items-center rounded-full border border-zinc-300 bg-white px-2"
               }
             >
               <div
@@ -514,8 +514,8 @@ export default function Home() {
                 aria-label={t.languageSelectAria}
                 className={
                   theme === "dark"
-                    ? "inline-flex overflow-hidden rounded-full border border-white/15 bg-zinc-900/60"
-                    : "inline-flex overflow-hidden rounded-full border border-zinc-300 bg-zinc-100"
+                    ? "inline-flex h-8 overflow-hidden rounded-full border border-white/15 bg-zinc-900/60"
+                    : "inline-flex h-8 overflow-hidden rounded-full border border-zinc-300 bg-zinc-100"
                 }
               >
                 {languageOptions.map((option) => {
@@ -529,11 +529,11 @@ export default function Home() {
                       className={
                         isActive
                           ? theme === "dark"
-                            ? "bg-sky-500/90 px-2.5 py-1 text-xs font-semibold text-white"
-                            : "bg-sky-600 px-2.5 py-1 text-xs font-semibold text-white"
+                            ? "inline-flex h-8 items-center bg-sky-500/90 px-2.5 text-xs font-semibold text-white"
+                            : "inline-flex h-8 items-center bg-sky-600 px-2.5 text-xs font-semibold text-white"
                           : theme === "dark"
-                            ? "px-2.5 py-1 text-xs font-medium text-zinc-300 transition hover:bg-white/10"
-                            : "px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200"
+                            ? "inline-flex h-8 items-center px-2.5 text-xs font-medium text-zinc-300 transition hover:bg-white/10"
+                            : "inline-flex h-8 items-center px-2.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200"
                       }
                       aria-pressed={isActive}
                     >
@@ -548,8 +548,8 @@ export default function Home() {
               onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
               className={
                 theme === "dark"
-                  ? "rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-zinc-200 transition hover:bg-white/15"
-                  : "rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
+                  ? "inline-flex h-10 items-center rounded-full border border-white/20 bg-white/10 px-4 text-xs font-medium text-zinc-200 transition hover:bg-white/15"
+                  : "inline-flex h-10 items-center rounded-full border border-zinc-300 bg-white px-4 text-xs font-medium text-zinc-700 transition hover:bg-zinc-100"
               }
               aria-label={t.themeToggleAria}
             >
