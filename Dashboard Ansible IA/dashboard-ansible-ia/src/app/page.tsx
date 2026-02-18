@@ -273,7 +273,7 @@ export default function Home() {
         </header>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <section className="rounded-3xl border border-white/15 bg-white/5 p-6 shadow-[0_10px_28px_-18px_rgba(56,189,248,0.45)] backdrop-blur-2xl">
+          <section className="rounded-3xl border border-white/15 bg-white/5 p-6 shadow-[0_10px_28px_-18px_rgba(56,189,248,0.45)] backdrop-blur-2xl md:min-h-[260px]">
             <div className="flex h-full flex-col items-center justify-center gap-4">
               <button
                 onClick={isRecording ? stopRecording : startRecording}
@@ -317,7 +317,7 @@ export default function Home() {
             </div>
           </section>
 
-          <section className={panelClass}>
+          <section className={`${panelClass} h-full md:min-h-[260px]`}>
             <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Transcripción</h2>
             <p className="mt-3 min-h-16 text-sm leading-relaxed text-zinc-100">
               {transcript || "Aquí aparecerá el texto reconocido por Whisper."}
