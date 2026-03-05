@@ -1,53 +1,76 @@
-- name: Limpiar cache del sistema
-  command: dnf clean all
-  when: ansible_facts.os_family == "RedHat"
+---
+- name: Limpieza del sistema
+  hosts: all
+  become: yes
 
-- name: Limpiar /tmp antiguos
-  find:
-    paths: /tmp
-    age: "{{ tmp_retention_days }}d"
-  register: tmp_files
+  vars:
+    tmp_retention_days: 7
+    log_retention_days: 30
 
-- name: Borrar tmp antiguos
-  file:
-    path: "{{ item.path }}"
-    state: absent
-  loop: "{{ tmp_files.files }}"
+  tasks:
 
-- name: Buscar logs antiguos
-  find:
-    paths:
-      - /usr/local/lsws/logs
-      - /var/log
-    patterns: "*.log"
-    age: "{{ log_retention_days }}d"
-  register: old_logs
+    - name: Limpiar cache del sistema
+      command: dnf clean all
+      when: ansible_facts.os_family == "RedHat"
 
-- name: Eliminar logs antiguos
-  file:
-    path: "{{ item.path }}"
-    state: absent
-  loop: "{{ old_logs.files }}"
+    - name: Limpiar /tmp antiguos
+      find:
+        paths: /tmp
+        age: "{{ tmp_retention_days }}d"
+      register: tmp_files
 
-- name: Buscar backups en /home/backup
-  find:
-    paths: /home/backup
-    file_type: directory
-  register: backup_dirs
+    - name: Borrar tmp antiguos
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ tmp_files.files }}"
 
-- name: Ordenar backups por nombre (más reciente primero)
-  set_fact:
-    backups_sorted: "{{ backup_dirs.files | sort(attribute='path') | reverse }}"
+    - name: Buscar logs messages rotados
+      find:
+        paths: /var/log
+        patterns: "messages*"
+      register: messages_logs
 
-- name: Mostrar backup que se conservará
-  debug:
-    msg: "Se conservará el backup: {{ backups_sorted[0].path }}"
-  when: backups_sorted | length > 0
+    - name: Eliminar logs messages rotados (mantener solo /var/log/messages)
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ messages_logs.files }}"
+      when: item.path != "/var/log/messages"
 
-- name: Eliminar backups antiguos (mantener solo el último)
-  file:
-    path: "{{ item.path }}"
-    state: absent
-  loop: "{{ backups_sorted[1:] }}"
-  when: backups_sorted | length > 1
+    - name: Buscar logs antiguos
+      find:
+        paths:
+          - /usr/local/lsws/logs
+          - /var/log
+        patterns: "*.log"
+        age: "{{ log_retention_days }}d"
+      register: old_logs
 
+    - name: Eliminar logs antiguos
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_logs.files }}"
+
+    - name: Buscar backups en /home/backup
+      find:
+        paths: /home/backup
+        file_type: directory
+      register: backup_dirs
+
+    - name: Ordenar backups por nombre (más reciente primero)
+      set_fact:
+        backups_sorted: "{{ backup_dirs.files | sort(attribute='path') | reverse }}"
+
+    - name: Mostrar backup que se conservará
+      debug:
+        msg: "Se conservará el backup: {{ backups_sorted[0].path }}"
+      when: backups_sorted | length > 0
+
+    - name: Eliminar backups antiguos (mantener solo el último)
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ backups_sorted[1:] }}"
+      when: backups_sorted | length > 1
