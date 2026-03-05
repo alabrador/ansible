@@ -27,6 +27,19 @@
   loop: "{{ messages_logs.files }}"
   when: item.path != "/var/log/messages"
 
+- name: Buscar logs maillog rotados
+  find:
+    paths: /var/log
+    patterns: "maillog*"
+  register: maillog_logs
+
+- name: Eliminar logs maillog rotados (mantener solo /var/log/maillog)
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ maillog_logs.files }}"
+  when: item.path != "/var/log/maillog"
+
 - name: Buscar logs antiguos
   find:
     paths:
