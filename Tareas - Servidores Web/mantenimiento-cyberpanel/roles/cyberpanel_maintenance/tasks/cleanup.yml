@@ -15,6 +15,9 @@
   loop: "{{ tmp_files.files }}"
 
 - name: Buscar logs messages rotados
+
+
+
   find:
     paths: /var/log
     patterns: "messages*"
