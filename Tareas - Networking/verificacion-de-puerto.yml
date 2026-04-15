@@ -1,22 +1,40 @@
 ---
-- name: Huawei S5720 interface control
-  hosts: huawei
+- name: Huawei S5720 Telnet shutdown cycle
+  hosts: localhost
   gather_facts: no
 
   tasks:
 
     - name: Shutdown interface
-      community.network.ce_config:
-        lines:
-          - interface GigabitEthernet0/0/5
-          - shutdown
+      ansible.builtin.expect:
+        command: telnet 192.168.70.40
+        timeout: 30
+        responses:
+          "Username:": "admin"
+          "Password:": "K4SP4R0V"
+          "<.*>":
+            - "system-view"
+          "\\[.*\\]":
+            - "interface GigabitEthernet0/0/5"
+            - "shutdown"
+            - "return"
+        echo: yes
 
     - name: Wait 10 seconds
       ansible.builtin.pause:
         seconds: 10
 
     - name: Undo shutdown
-      community.network.ce_config:
-        lines:
-          - interface GigabitEthernet0/0/5
-          - undo shutdown
+      ansible.builtin.expect:
+        command: telnet 192.168.70.40
+        timeout: 30
+        responses:
+          "Username:": "admin"
+          "Password:": "K4SP4R0V"
+          "<.*>":
+            - "system-view"
+          "\\[.*\\]":
+            - "interface GigabitEthernet0/0/5"
+            - "undo shutdown"
+            - "return"
+        echo: yes
