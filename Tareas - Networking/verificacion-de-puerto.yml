@@ -1,45 +1,62 @@
 ---
-- name: Huawei Telnet Interface Control
+- name: Huawei S5720 - Reset interfaz via Telnet (PRO)
   hosts: localhost
   gather_facts: no
 
   vars:
     huawei_host: "192.168.70.40"
+    interface_name: "GigabitEthernet0/0/5"
 
   tasks:
 
-    - name: Shutdown interface via telnet
+    - name: Shutdown interfaz
       ansible.builtin.expect:
         command: "telnet {{ huawei_host }}"
-        timeout: 30
+        timeout: 60
         responses:
           "Username:": "{{ huawei_user }}"
           "Password:": "{{ huawei_pass }}"
-          "<.*>":
-            - "system-view"
-            - "quit"
+
+          "<.*>": "system-view"
+
           "\\[.*\\]":
-            - "interface GigabitEthernet0/0/5"
+            - "interface {{ interface_name }}"
             - "shutdown"
             - "return"
-        echo: yes
+            - "quit"
 
-    - name: Wait 10 seconds
+        echo: yes
+      register: telnet_shutdown
+      failed_when: false
+
+    - name: Debug shutdown (opcional)
+      debug:
+        var: telnet_shutdown.stdout
+
+    - name: Esperar 10 segundos
       ansible.builtin.pause:
         seconds: 10
 
-    - name: Undo shutdown via telnet
+    - name: Undo shutdown interfaz
       ansible.builtin.expect:
         command: "telnet {{ huawei_host }}"
-        timeout: 30
+        timeout: 60
         responses:
           "Username:": "{{ huawei_user }}"
           "Password:": "{{ huawei_pass }}"
-          "<.*>":
-            - "system-view"
-            - "quit"
+
+          "<.*>": "system-view"
+
           "\\[.*\\]":
-            - "interface GigabitEthernet0/0/5"
+            - "interface {{ interface_name }}"
             - "undo shutdown"
             - "return"
+            - "quit"
+
         echo: yes
+      register: telnet_noshutdown
+      failed_when: false
+
+    - name: Debug undo shutdown (opcional)
+      debug:
+        var: telnet_noshutdown.stdout
