@@ -1,43 +1,17 @@
----
-- name: Huawei S5720 Telnet Interface Control
-  hosts: localhost
-  gather_facts: no
+- name: Shutdown interface via telnet
+  ansible.builtin.expect:
+    command: "telnet {{ huawei_host }}"
+    timeout: 30
+    responses:
+      "Username:": "{{ huawei_user }}"
+      "Password:": "{{ huawei_pass }}"
 
-  vars:
-    huawei_host: "192.168.70.40"
+      "<.*>":
+        - "system-view"
+        - "quit"   # 👈 IMPORTANTE (para cerrar sesión)
 
-  tasks:
-
-    - name: Shutdown interface via telnet
-      ansible.builtin.expect:
-        command: "telnet {{ huawei_host }}"
-        timeout: 30
-        responses:
-          "Username:": "{{ ansible_user }}"
-          "Password:": "{{ ansible_password }}"
-          "<.*>":
-            - "system-view"
-          "\\[.*\\]":
-            - "interface GigabitEthernet0/0/5"
-            - "shutdown"
-            - "return"
-        echo: yes
-
-    - name: Wait 10 seconds
-      ansible.builtin.pause:
-        seconds: 10
-
-    - name: Undo shutdown via telnet
-      ansible.builtin.expect:
-        command: "telnet {{ huawei_host }}"
-        timeout: 30
-        responses:
-          "Username:": "{{ ansible_user }}"
-          "Password:": "{{ ansible_password }}"
-          "<.*>":
-            - "system-view"
-          "\\[.*\\]":
-            - "interface GigabitEthernet0/0/5"
-            - "undo shutdown"
-            - "return"
-        echo: yes
+      "\\[.*\\]":
+        - "interface GigabitEthernet0/0/5"
+        - "shutdown"
+        - "return"
+    echo: yes
