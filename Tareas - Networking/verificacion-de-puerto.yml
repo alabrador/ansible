@@ -1,17 +1,20 @@
 ---
-- name: Huawei S5720 Telnet shutdown cycle
+- name: Huawei S5720 Telnet Interface Control
   hosts: localhost
   gather_facts: no
 
+  vars:
+    huawei_host: "192.168.70.40"
+
   tasks:
 
-    - name: Shutdown interface
+    - name: Shutdown interface via telnet
       ansible.builtin.expect:
-        command: telnet 192.168.70.40
+        command: "telnet {{ huawei_host }}"
         timeout: 30
         responses:
-          "Username:": "admin"
-          "Password:": "K4SP4R0V"
+          "Username:": "{{ ansible_user }}"
+          "Password:": "{{ ansible_password }}"
           "<.*>":
             - "system-view"
           "\\[.*\\]":
@@ -24,13 +27,13 @@
       ansible.builtin.pause:
         seconds: 10
 
-    - name: Undo shutdown
+    - name: Undo shutdown via telnet
       ansible.builtin.expect:
-        command: telnet 192.168.70.40
+        command: "telnet {{ huawei_host }}"
         timeout: 30
         responses:
-          "Username:": "admin"
-          "Password:": "K4SP4R0V"
+          "Username:": "{{ ansible_user }}"
+          "Password:": "{{ ansible_password }}"
           "<.*>":
             - "system-view"
           "\\[.*\\]":
