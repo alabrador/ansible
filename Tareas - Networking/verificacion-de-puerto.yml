@@ -1,5 +1,5 @@
 ---
-- name: Huawei S5720 - Reset interfaz via Telnet (PRO)
+- name: Huawei S5720 - Reset interfaz via Telnet
   hosts: localhost
   gather_facts: no
 
