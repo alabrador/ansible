@@ -5,7 +5,7 @@
 
   vars:
     huawei_host: "{{ switch_host | default('192.168.70.40') }}"
-    interface_name: "{{ switch_interface | default('GigabitEthernet0/0/3') }}"
+    interface_name: "{{ switch_interface | default('GigabitEthernet0/0/5') }}"
 
   tasks:
 
