@@ -1,11 +1,11 @@
 ---
-- name: Huawei S5720 - Reset interfaz via Telnet (PRO)
+- name: Huawei S5720 - Reset interfaz via Telnet
   hosts: localhost
   gather_facts: no
 
   vars:
-    huawei_host: "192.168.70.40"
-    interface_name: "GigabitEthernet0/0/5"
+    huawei_host: "{{ switch_host | default('192.168.70.40') }}"
+    interface_name: "{{ switch_interface | default('GigabitEthernet0/0/3') }}"
 
   tasks:
 
